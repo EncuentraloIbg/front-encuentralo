@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # proyecto-vue
 
 This template should help get you started developing with Vue 3 in Vite.
@@ -59,3 +60,6 @@ npm run test:e2e
 ```sh
 npm run lint
 ```
+=======
+# front-encuentralo
+>>>>>>> 29be82629f50a67d6d2c017eab3a8f985fbb14d8
