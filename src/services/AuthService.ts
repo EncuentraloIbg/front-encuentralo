@@ -1,89 +1,110 @@
 // src/services/AuthService.ts
+import { authSetStore } from '@/stores/AuthStore'
 
-import { authSetStore } from '@/stores/AuthStore'; // Importa el AuthStore para obtener el token
+export type ApiMessage = { message: string }
+export type LoginResponse = { type: 'bearer'; token: string; user: unknown }
 
-// Define la URL base de tu API de AdonisJS
-// IMPORTANTE: Asegúrate de que esta URL sea correcta.
-// Para el login, la ruta parece ser directamente en la raíz, no bajo /api
-const API_BASE_URL = 'http://localhost:3333';
+type ErrorPayload = { message?: string; error?: string }
+type TokenShape = string | { value?: string }
+type LoginOk = { type: 'bearer'; token: TokenShape; user: unknown }
+
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
+  'http://localhost:3333/api'
+
+function isJsonResponse(resp: Response): boolean {
+  const ct = resp.headers.get('content-type') || ''
+  return ct.includes('application/json')
+}
+async function safeJson<T>(resp: Response): Promise<T | null> {
+  if (!isJsonResponse(resp)) return null
+  try { return (await resp.json()) as T } catch { return null }
+}
+function getMessage(input: unknown, fallback: string): string {
+  if (input && typeof input === 'object') {
+    const obj = input as Record<string, unknown>
+    const msg = obj['message']
+    const err = obj['error']
+    if (typeof msg === 'string') return msg
+    if (typeof err === 'string') return err
+  }
+  return fallback
+}
+function normalizeToken(token: TokenShape | null | undefined): string {
+  if (typeof token === 'string') return token
+  if (token && typeof (token as any).value === 'string') return (token as any).value
+  return ''
+}
+function isLoginOk(input: unknown): input is LoginOk {
+  if (!input || typeof input !== 'object') return false
+  const obj = input as Record<string, unknown>
+  return obj['type'] === 'bearer' && 'token' in obj
+}
 
 export default class AuthService {
-  /**
-   * Método para iniciar sesión de un usuario.
-   * NO requiere token de autenticación.
-   */
-  async login(correo: string, password: string) {
-    try {
-      // La URL para el login parece ser directamente en la raíz de la API, ej. http://localhost:3333/login
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // 'Content-Type' es el correcto, 'content-type' también funciona pero es menos común
-        },
-        body: JSON.stringify({ correo, password }),
-      });
+  /** Iniciar sesión (POST /api/login) */
+  async login(correo: string, password: string): Promise<LoginResponse> {
+    const resp = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo: correo.trim().toLowerCase(), password }),
+    })
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error en la autenticación');
-      }
+    const data = await safeJson<LoginOk | ErrorPayload>(resp)
+    if (!resp.ok) throw new Error(getMessage(data, 'Error en la autenticación'))
+    if (!isLoginOk(data)) throw new Error('Respuesta inesperada del servidor.')
 
-      return await response.json();
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('Error en AuthService.login:', error.message);
-        return { errors: [{ message: error.message }] };
-      }
-      console.error('Error desconocido en AuthService.login:', error);
-      return { errors: [{ message: 'Error desconocido' }] };
-    }
+    const token = normalizeToken(data.token)
+    if (!token) throw new Error('No se recibió un token válido del servidor.')
+
+    return { type: 'bearer', token, user: data.user ?? null }
   }
 
-  /**
-   * Método para verificar la sesión del usuario obteniendo su información.
-   * REQUIERE enviar el token de autenticación.
-   *
-   * Asume que la ruta en tu backend de AdonisJS para obtener la información del usuario
-   * autenticado es GET /api/me y está protegida por middleware de autenticación.
-   */
-  async me() {
-    const authStore = authSetStore(); // Obtiene la instancia del store
-    const token = authStore.token; // Obtiene el token del store
+  /** Recuperar contraseña (POST /api/forgot-password) */
+  async forgotPassword(correo: string): Promise<ApiMessage> {
+    const resp = await fetch(`${API_BASE_URL}/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo }),
+    })
+    const data = await safeJson<ApiMessage | ErrorPayload>(resp)
+    if (!resp.ok) throw new Error(getMessage(data, 'No se pudo enviar el correo'))
+    return { message: getMessage(data, 'Hemos enviado las instrucciones a tu correo.') }
+  }
 
-    // Si no hay token en el store, no podemos hacer la petición autenticada
-    if (!token) {
-      console.warn('AuthService.me(): No hay token de autenticación disponible. No se puede verificar la sesión.');
-      // Lanzamos un error para que el AuthStore lo capture y haga logout si es necesario.
-      throw new Error('No hay token de autenticación disponible para verificar la sesión.');
+  /** Restablecer contraseña (POST /api/reset-password) */
+  async resetPassword(token: string, password: string): Promise<ApiMessage> {
+    const resp = await fetch(`${API_BASE_URL}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    })
+    const data = await safeJson<ApiMessage | ErrorPayload>(resp)
+    if (!resp.ok) throw new Error(getMessage(data, 'No se pudo restablecer la contraseña'))
+    return { message: getMessage(data, 'Contraseña actualizada correctamente.') }
+  }
+
+  /** Verificar sesión (GET /api/me) */
+  async me(): Promise<{ user: unknown }> {
+    const authStore = authSetStore()
+    const token = authStore.token
+    if (!token) throw new Error('No hay token de autenticación disponible para verificar la sesión.')
+
+    const resp = await fetch(`${API_BASE_URL}/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    const data = await safeJson<{ user: unknown } & ErrorPayload>(resp)
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error('Token de autenticación expirado o inválido.')
+      throw new Error(getMessage(data, 'Error al obtener el usuario.'))
     }
-
-    try {
-      // La URL para obtener información del usuario autenticado, típicamente /api/me
-      // Asegúrate de que esta ruta '/api/me' exista en tu AdonisJS y esté protegida.
-      const response = await fetch(`${API_BASE_URL}/api/me`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // <--- ¡Esto es CRUCIAL! Envía el token
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        // Manejo específico para el 401: token inválido o expirado
-        if (response.status === 401) {
-          throw new Error('Token de autenticación expirado o inválido.');
-        }
-        // Para otros errores HTTP (400, 500, etc.)
-        throw new Error(errorData.message || 'Error al obtener información del usuario.');
-      }
-
-      // Si la respuesta es exitosa, devuelve los datos del usuario
-      return await response.json();
-    } catch (error) {
-      console.error('Error en AuthService.me():', error);
-      // Propaga el error para que `AuthStore.checkAuth` pueda manejarlo (ej. llamar a `logout`)
-      throw error;
+    if (!data || typeof data !== 'object' || !('user' in data)) {
+      throw new Error('Respuesta inesperada del servidor al consultar /me.')
     }
+    return { user: (data as any).user }
   }
 }
