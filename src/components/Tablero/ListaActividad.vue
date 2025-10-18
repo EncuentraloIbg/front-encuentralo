@@ -16,12 +16,27 @@
 </template>
 
 <script setup lang="ts">
-import type { ActividadItem } from '@/composables/useTablero'
+import type { ActividadItem } from '@/composables/useDashboardOrdenes'
 defineProps<{ items: ActividadItem[] }>()
 </script>
 
 <style scoped>
-.section-card{ background:#F8F8F8; border-radius:16px; padding:30px; border:1px solid #6d62ca; overflow:hidden; }
-.section-title-blue{ color:#164CE0; font-weight:700; border-bottom:3px solid #0A72ED; padding-bottom:12px; }
-.text-grey{ color:#333; font-style:italic; padding:25px; }
+.section-card {
+  background: #f6f7f9;                  /* gris suave */
+  border-radius: 16px;
+  padding: 30px;
+  border: 1px solid #e5e7eb;            /* borde gris */
+  overflow: hidden;
+}
+.section-title-blue {
+  color: #111827;                       /* título gris oscuro */
+  font-weight: 700;
+  border-bottom: 2px solid #d1d5db;     /* subrayado gris */
+  padding-bottom: 12px;
+}
+.text-grey {
+  color: #6b7280;                       /* texto auxiliar gris medio */
+  font-style: italic;
+  padding: 25px;
+}
 </style>

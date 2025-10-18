@@ -49,9 +49,7 @@
 
           <div class="meta">
             <!-- 🔁 Antes: to="/forgot-password" -->
-            <router-link to="/reset-password" class="link">
-              ¿Olvidó su contraseña?
-            </router-link>
+          
             <!-- Si prefieres por nombre de ruta:
             <router-link :to="{ name: 'NewPassword', params: { token: 'preview' } }" class="link">
               ¿Olvidó su contraseña?

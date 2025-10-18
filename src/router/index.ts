@@ -1,76 +1,106 @@
-// src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 import { authSetStore } from '@/stores/AuthStore'
-
-import LoginView from '@/views/LoginView.vue'
-import ResetPasswordView from '@/views/ResetPasswordView.vue'
-import NewPasswordView from '@/views/NewPasswordView.vue'
-import DashboardView from '@/views/DashboardView.vue'
-import HomeView from '@/views/HomeView.vue'
-import FormularioUsuarios from '@/views/FormularioUsuarios.vue'
-import TicketsView from '@/views/TicketsView.vue'               // usado como "Órdenes"
-import FormulariosProyectos from '@/views/FormulariosProyectos.vue'
-import HistorialTicketsView from '@/views/HistorialTicketsView.vue' // usado como "Historial Órdenes"
-import TicketDetalleView from '@/views/TicketDetalleView.vue'       // usado como "Detalle Orden"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', name: 'home', component: HomeView },
+    // Home
+    { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
 
-    { path: '/login', component: LoginView, meta: { layout: 'AuthLayout' } },
-
-    // Recuperación (form: ingresar correo)
-    { path: '/reset-password', component: ResetPasswordView, meta: { layout: 'AuthLayout' } },
-
-    // Compatibilidad: enlaces antiguos
-    { path: '/forgot-password', redirect: '/reset-password' },
-
-    // Establecer nueva contraseña con token
+    // Auth
     {
-      path: '/new-password/:token',
-      name: 'NewPassword',
-      component: NewPasswordView,
-      props: true,
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
       meta: { layout: 'AuthLayout' },
     },
 
-    { path: '/dashboard', component: DashboardView, meta: { layout: 'MainLayout', requiresAuth: true } },
+    // Dashboard
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/DashboardView.vue'),
+      meta: { layout: 'MainLayout' },
+    },
 
-    { path: '/Usuarios', component: FormularioUsuarios, meta: { layout: 'MainLayout' } },
+    // ====== ÓRDENES ======
+    // Listado / zona de creación
+    {
+      path: '/ordenes',
+      name: 'ordenes',
+      component: () => import('@/views/OrdenesView.vue'),
+      meta: { layout: 'MainLayout' },
+    },
 
-    // === Renombrados ===
-    { path: '/ordenes', name: 'ordenes', component: TicketsView, meta: { layout: 'MainLayout' } },
+    // Pantalla dedicada para crear (opcional)
+    {
+      path: '/ordenes/crear',
+      name: 'ordenes-crear',
+      component: () => import('@/views/OrdenesView.vue'),
+      meta: { layout: 'MainLayout' },
+    },
+
+    // Historial
     {
       path: '/historial-ordenes',
-      name: 'HistorialOrdenes',
-      component: HistorialTicketsView,
+      name: 'historial-ordenes',
+      component: () => import('@/views/HistorialOrdenesView.vue'),
       meta: { layout: 'MainLayout' },
     },
+
+    // === Edición de orden en pantalla completa ===
     {
-      path: '/ordenes/:id',
-      name: 'detalle-orden',
-      component: TicketDetalleView,
+      path: '/ordenes/:id/editar',
+      name: 'orden-editar',
+      component: () => import('@/views/OrdenEditar.vue'),
+      meta: { layout: 'MainLayout' },
+      props: true,
+    },
+
+    // ====== CONFIGURACIÓN EMPRESA ======
+    {
+      path: '/configuracion/empresa',
+      name: 'configuracion-empresa',
+      component: () => import('@/views/ConfiguracionEmpresa.vue'),
       meta: { layout: 'MainLayout' },
     },
 
-    // (Opcional) otros activos
-    { path: '/proyectos', name: 'FormulariosProyectos', component: FormulariosProyectos, meta: { layout: 'MainLayout' } },
+    // ====== Redirecciones desde rutas antiguas eliminadas ======
+    { path: '/usuarios', redirect: { name: 'ordenes' } },
+    { path: '/proyectos', redirect: { name: 'ordenes' } },
+    { path: '/tickets', redirect: { name: 'ordenes' } },
+    { path: '/historial-tickets', redirect: { name: 'historial-ordenes' } },
 
-    // Catch-all
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    // Catch-all a Home
+    { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
   ],
 })
 
+// Guard simple
 router.beforeEach((to, _from, next) => {
-  const store = authSetStore()
-  const isAuthenticated = !!store.token
+  const auth = authSetStore()
+  const isLogged = !!auth.token
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else {
-    next()
-  }
+  // Si ya está logueado, no tiene sentido ir a /login
+  if (to.name === 'login' && isLogged) return next({ name: 'dashboard' })
+
+  // Si no estás logueado, bloquea rutas de MainLayout (excepto login/home)
+  const isProtected =
+    to.name !== 'login' &&
+    to.name !== 'home' &&
+    // todas las vistas de la app que requieren sesión
+    [
+      'dashboard',
+      'ordenes',
+      'ordenes-crear',
+      'historial-ordenes',
+      'orden-editar',
+      'configuracion-empresa',
+    ].includes(String(to.name))
+
+  if (isProtected && !isLogged) return next({ name: 'login' })
+
+  next()
 })
 
 export default router

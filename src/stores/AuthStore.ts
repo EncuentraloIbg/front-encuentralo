@@ -1,205 +1,223 @@
 // src/stores/AuthStore.ts
 import router from '@/router'
-import AuthService from '@/services/AuthService'
 import { defineStore } from 'pinia'
-import {
-  obtenerNotificaciones,
-  marcarComoLeida,
-  initializeSseConnection,
-  closeSseConnection,
-} from '@/services/NotificacionService'
 
-interface User {
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+interface HttpErrorShape {
+  status: number
+  statusText: string
+  message: string
+  data?: unknown
+}
+class HttpError extends Error implements HttpErrorShape {
+  status: number
+  statusText: string
+  data?: unknown
+  constructor(init: HttpErrorShape) {
+    super(init.message)
+    this.name = 'HttpError'
+    this.status = init.status
+    this.statusText = init.statusText
+    this.data = init.data
+  }
+}
+
+function getBaseUrl(): string {
+  const raw = (import.meta as any)?.env?.VITE_API_BASE_URL ?? 'http://localhost:3333'
+  return String(raw).replace(/\/$/, '')
+}
+const API_BASE = `${getBaseUrl()}/api/v1`
+
+function getAuthHeader(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+function isFormData(v: unknown): v is FormData {
+  return typeof FormData !== 'undefined' && v instanceof FormData
+}
+function safeJson(text: string): unknown {
+  try { return text ? JSON.parse(text) : undefined } catch { return undefined }
+}
+
+async function httpRequest<T>(
+  path: string,
+  opts?: { method?: HttpMethod; body?: unknown; signal?: AbortSignal; headers?: Record<string, string> }
+): Promise<T> {
+  const method = opts?.method ?? 'GET'
+  const body = opts?.body
+  const form = isFormData(body)
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      ...(form ? {} : { 'Content-Type': 'application/json' }),
+      ...getAuthHeader(),
+      ...(opts?.headers ?? {}),
+    },
+    body: form ? (body as any) : body !== undefined ? JSON.stringify(body) : undefined,
+    signal: opts?.signal,
+  })
+
+  if (res.status === 204) return undefined as unknown as T
+
+  const text = await res.text()
+  const data = safeJson(text)
+
+  if (!res.ok) {
+    const message =
+      data && typeof data === 'object' && 'message' in (data as any) && typeof (data as any).message === 'string'
+        ? (data as any).message
+        : `HTTP ${res.status} ${res.statusText}`
+
+    throw new HttpError({ status: res.status, statusText: res.statusText, message, data })
+  }
+  return data as T
+}
+
+/* Tipos */
+export interface User {
   id: number
   nombre: string
   email: string
+  profilePictureUrl?: string
 }
 
-interface Notification {
+interface ApiUser {
   id: number
-  titulo: string
-  mensaje: string
-  ticketId: number
-  leido: boolean
-  // puedes agregar más props si las usas (estadoId, etc.)
+  nombres?: string
+  apellidos?: string
+  correo?: string
+  email?: string
+  profilePictureUrl?: string
+  avatar_url?: string
+  foto?: string
+  foto_perfil?: string
+}
+
+interface LoginResponse {
+  token: string
+  user: ApiUser
+}
+
+interface MeResponse {
+  user: ApiUser | null
+}
+
+/** Backend → Store */
+function mapApiUser(apiUser: ApiUser): User {
+  const fullName = [apiUser.nombres, apiUser.apellidos].filter(Boolean).join(' ').trim()
+  return {
+    id: apiUser.id,
+    nombre: fullName || apiUser.email || apiUser.correo || '',
+    email: apiUser.correo ?? apiUser.email ?? '',
+    profilePictureUrl:
+      apiUser.avatar_url ??
+      apiUser.profilePictureUrl ??
+      apiUser.foto ??
+      apiUser.foto_perfil ??
+      undefined,
+  }
+}
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof HttpError) return err.message
+  if (err instanceof Error) return err.message
+  return 'Error desconocido'
 }
 
 export const authSetStore = defineStore('auth', {
   state: () => {
     let user: User | null = null
+    let token: string | null = null
+    let avatarStamp = Date.now() // para cache-busting en imágenes
     try {
       const storedUser = localStorage.getItem('user')
-      if (storedUser) user = JSON.parse(storedUser)
+      const storedToken = localStorage.getItem('token')
+      const storedStamp = localStorage.getItem('avatarStamp')
+      if (storedUser) user = JSON.parse(storedUser) as User
+      if (storedToken) token = String(storedToken)
+      if (storedStamp) avatarStamp = Number(storedStamp)
     } catch (error) {
-      console.error('Error al parsear el usuario desde localStorage:', error)
+      console.error('Error al parsear estado desde localStorage:', error)
     }
-    return {
-      user,
-      token: localStorage.getItem('token') || null,
-      notificaciones: [] as Notification[],
-      cantidadNoLeidas: 0,
-      loadingNotifications: false,
-      sseConnectionActive: false,
-    }
+    return { user, token, avatarStamp }
   },
 
   actions: {
-    /** LOGIN */
     async login(userData: { email: string; password: string }): Promise<boolean> {
       try {
-        const auth = new AuthService()
-        const res = await auth.login(userData.email, userData.password)
+        const body = { correo: userData.email, password: userData.password }
+        const res = await httpRequest<LoginResponse>('/login', { method: 'POST', body })
 
-        // Adaptar shape del backend -> store (correo → email, nombres+apellidos → nombre)
-        const apiUser = res.user as any
-        const user: User = {
-          id: apiUser.id,
-          nombre: [apiUser.nombres, apiUser.apellidos].filter(Boolean).join(' ').trim(),
-          email: apiUser.correo,
-        }
-
+        const user = mapApiUser(res.user)
         this.token = res.token
         this.user = user
+        this.avatarStamp = Date.now()
 
         localStorage.setItem('token', res.token)
         localStorage.setItem('user', JSON.stringify(user))
-
-        await this.loadNotificationsFromApi()
-        this.startSseConnection()
+        localStorage.setItem('avatarStamp', String(this.avatarStamp))
 
         router.push('/dashboard')
         return true
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Error al iniciar sesión'
-        console.error('AuthStore.login:', msg)
+        console.error('AuthStore.login:', getErrorMessage(e))
         return false
       }
     },
 
-    /** LOGOUT */
     async logout() {
       this.user = null
       this.token = null
-      this.notificaciones = []
-      this.cantidadNoLeidas = 0
-
       localStorage.removeItem('user')
       localStorage.removeItem('token')
-
-      closeSseConnection()
-      this.sseConnectionActive = false
-
+      localStorage.removeItem('avatarStamp')
       router.push('/login')
     },
 
-    /** CHECK AUTH (usa /api/me) */
     async checkAuth() {
-      if (this.token && !this.user) {
-        try {
-          const authService = new AuthService()
-          const response = await authService.me()
+      if (!this.token) return
 
-          if ((response as any).user) {
-            const apiUser = (response as any).user
-            this.user = {
-              id: apiUser.id,
-              nombre: [apiUser.nombres, apiUser.apellidos].filter(Boolean).join(' ').trim(),
-              email: apiUser.correo,
-            }
-            localStorage.setItem('user', JSON.stringify(this.user))
+      if (this.user) {
+        const path = router.currentRoute.value.path
+        if (path === '/login' || path === '/register') router.push('/dashboard')
+        return
+      }
 
-            await this.loadNotificationsFromApi()
-            this.startSseConnection()
+      try {
+        const response = await httpRequest<MeResponse>('/me', { method: 'GET' })
+        if (!response.user) return
 
-            if (
-              router.currentRoute.value.path === '/login' ||
-              router.currentRoute.value.path === '/register'
-            ) {
-              router.push('/dashboard')
-            }
-          } else {
-            console.error('checkAuth: No se pudo obtener el usuario o token inválido.')
-            this.logout()
-          }
-        } catch (error: unknown) {
-          const msg =
-            (error as any)?.response?.data?.message ??
-            (error instanceof Error ? error.message : 'Error desconocido')
-          console.error('checkAuth:', msg)
+        this.user = mapApiUser(response.user)
+        localStorage.setItem('user', JSON.stringify(this.user))
+      } catch (error: unknown) {
+        if (error instanceof HttpError && (error.status === 401 || error.status === 419)) {
           this.logout()
+        } else {
+          console.warn('checkAuth:', getErrorMessage(error))
         }
-      } else if (this.token && this.user) {
-        await this.loadNotificationsFromApi()
-        this.startSseConnection()
-
-        if (
-          router.currentRoute.value.path === '/login' ||
-          router.currentRoute.value.path === '/register'
-        ) {
-          router.push('/dashboard')
-        }
-      } else {
-        console.log('checkAuth: No hay token en localStorage.')
       }
     },
 
-    /** ==== NOTIFICACIONES ==== */
-    handleNewSseNotification(notificationData: any) {
-      console.log('AuthStore: Nueva notificación SSE:', notificationData)
-      this.notificaciones.unshift({
-        id: notificationData.id,
-        titulo: notificationData.title,
-        mensaje: notificationData.message,
-        ticketId: notificationData.ticketId,
-        leido: false,
-      })
-      this.cantidadNoLeidas++
-    },
+    /** Actualiza MI perfil y refresca el store (además, hace bust de caché del avatar) */
+    async updateMyProfile(payload: {
+      nombres?: string
+      apellidos?: string
+      telefono?: string
+      direccion?: string
+      avatar_url?: string | null
+    }) {
+      // PUT /api/v1/usuarios/me  👈 esta ruta debe existir
+      await httpRequest('/usuarios/me', { method: 'PUT', body: payload })
 
-    startSseConnection() {
-      if (!this.user?.id) {
-        console.warn('AuthStore: No hay usuario para iniciar SSE.')
-        return
-      }
-      if (this.sseConnectionActive) {
-        console.log('AuthStore: SSE ya activa.')
-        return
-      }
-      try {
-        initializeSseConnection(this.user.id, this.handleNewSseNotification.bind(this))
-        this.sseConnectionActive = true
-      } catch (error) {
-        console.error('AuthStore: Error SSE:', error)
-        this.sseConnectionActive = false
-      }
-    },
-
-    async loadNotificationsFromApi() {
-      if (!this.user?.id || this.loadingNotifications) {
-        console.warn('AuthStore: No se cargan notificaciones (sin usuario o ya cargando).')
-        return
-      }
-      this.loadingNotifications = true
-      try {
-        const userId = this.user.id
-        const fetched = await obtenerNotificaciones(userId)
-        this.notificaciones = fetched
-        this.cantidadNoLeidas = fetched.filter((n: Notification) => !n.leido).length
-      } catch (err) {
-        console.error('AuthStore: Error al cargar notificaciones:', err)
-        this.notificaciones = []
-        this.cantidadNoLeidas = 0
-      } finally {
-        this.loadingNotifications = false
-      }
-    },
-
-    async markNotificationAsRead(notificationId: number) {
-      try {
-        await marcarComoLeida(notificationId)
-        await this.loadNotificationsFromApi()
-      } catch (error) {
-        console.error('Error al marcar notificación como leída:', error)
+      // refresca /me y guarda
+      const me = await httpRequest<MeResponse>('/me', { method: 'GET' })
+      if (me.user) {
+        this.user = mapApiUser(me.user)
+        this.avatarStamp = Date.now() // bust cache
+        localStorage.setItem('user', JSON.stringify(this.user))
+        localStorage.setItem('avatarStamp', String(this.avatarStamp))
       }
     },
   },

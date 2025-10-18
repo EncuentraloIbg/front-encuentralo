@@ -1,73 +1,123 @@
-import { authSetStore } from '@/stores/AuthStore'; // Necesitamos el AuthStore para obtener el token
+// src/services/dashboardOrdenesService.ts
+import { authSetStore } from '@/stores/AuthStore'
 
-const API_BASE_URL = 'http://localhost:3333/api'; // <--- ASEGÚRATE DE QUE ESTA URL SEA CORRECTA
+const apiBaseFromEnv =
+  typeof import.meta !== 'undefined'
+    ? (import.meta.env?.VITE_API_BASE_URL as string | undefined)
+    : undefined
 
-/**
- * Define las interfaces para la estructura de datos que esperamos del backend
- * para el dashboard. Esto mejora la seguridad de tipos en el frontend.
- */
-export interface MetricData {
-  ticketsAbiertos: number;
-  ticketsCerradosMes: number;
-  nuevosUsuarios: number;
+// http://localhost:3333  -> añadimos /api/v1 nosotros
+const API_ORIGIN = (apiBaseFromEnv ? apiBaseFromEnv.replace(/\/$/, '') : 'http://localhost:3333')
+const API_BASE = `${API_ORIGIN}/api/v1`
+
+/** ===== Tipos que devuelve tu backend ===== */
+export interface DashboardMetricsApi {
+  pendientes: number
+  recibidasHoy: number
+  recibidasMes: number
+  entregadasUlt30: number
+  canceladasUlt30: number
+  rechazadasUlt30: number
 }
 
-export interface ActivityItem {
-  id: number;
-  titulo: string;
-  estado: string;
-  asignadoA: string;
-  empresa: string;
-  evento: string;
-  fecha: string;
+export interface DashboardActividadApi {
+  id: number
+  estado: 'recibido' | 'entregado' | 'cancelada' | 'rechazada'
+  createdAt: string | null
+  createdAtRelative: string | null
+  orden: {
+    id: number
+    codigo: string
+    estado: string
+    createdAt: string | null
+    razonSocial: string | null
+    cliente: string | null
+  } | null
 }
 
-export interface TaskItem {
-  id: number;
-  titulo: string;
-  prioridad: string;
-  estado: string;
-  vence: string;
-  detalle: string;
+export interface DashboardApiResponse {
+  filters: { razon_social_id: number | null; desde: string | null; hasta: string | null }
+  metrics: DashboardMetricsApi
+  actividadReciente: DashboardActividadApi[]
+  ultimasOrdenes: Array<{
+    id: number
+    codigo: string
+    estado: string
+    createdAt: string | null
+    razonSocial: string | null
+    cliente: string | null
+  }>
 }
 
-// Adapta la interfaz principal del DashboardResponse a la estructura del servicio de ejemplo
-// para mantener la consistencia, aunque los datos internos sigan siendo los tuyos.
-export interface DashboardResponse {
-  metrics: MetricData;
-  actividadReciente: ActivityItem[];
-  tareasPendientes: TaskItem[];
+/** ===== Tipos que consume el front ===== */
+export interface MetricasUI {
+  ordenesAbiertas: number
+  ordenesCerradasMes: number // cerradas últimos 30d (entregadas + canceladas + rechazadas)
+  ordenesHoy: number
 }
 
-export default class DashboardService {
-  static async getDashboardData(): Promise<DashboardResponse> {
-    const authStore = authSetStore(); // Obtiene la instancia del store
-    const token = authStore.user.id; // Obtiene el token
+export interface ActividadItemUI {
+  id: number
+  titulo: string
+  estado: string
+  empresa: string
+  asignadoA: string
+  evento: string
+  fecha: string
+}
 
-    console.log('DashboardService - Token recuperado del AuthStore:', token);
-    if (!token) {
-      throw new Error('No authentication token found. Please log in.');
+/** ===== Servicio ===== */
+export default class DashboardOrdenesService {
+  static async fetch(): Promise<{
+    metricas: MetricasUI
+    actividad: ActividadItemUI[]
+    bruto: DashboardApiResponse
+  }> {
+    const auth = authSetStore()
+
+    // Intenta varias propiedades típicas para el token
+    const token =
+      (auth as any)?.token ||
+      (auth as any)?.accessToken ||
+      (auth as any)?.user?.token ||
+      localStorage.getItem('token')
+
+    const headers: HeadersInit = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const res = await fetch(`${API_BASE}/dashboard`, { method: 'GET', headers })
+    if (!res.ok) {
+      const msg = await res.text()
+      throw new Error(`Dashboard ${res.status}: ${msg || 'Error al cargar'}`)
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/dashboard`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+    const json = (await res.json()) as DashboardApiResponse
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.message || 'Error desconocido al obtener datos del dashboard';
-        throw new Error(`Error ${response.status}: ${errorMessage}`);
+    // Adaptación a tarjetas:
+    const m = json.metrics
+    const metricas: MetricasUI = {
+      ordenesAbiertas: m.pendientes,
+      ordenesCerradasMes: (m.entregadasUlt30 || 0) + (m.canceladasUlt30 || 0) + (m.rechazadasUlt30 || 0),
+      ordenesHoy: m.recibidasHoy,
+    }
+
+    // Adaptación a lista de actividad:
+    const actividad: ActividadItemUI[] = (json.actividadReciente || []).map((h) => {
+      const code = h.orden?.codigo ?? `#${h.orden?.id ?? h.id}`
+      const estado = (h.estado || h.orden?.estado || '').toUpperCase()
+      const cliente = h.orden?.cliente || 'Cliente'
+      const rs = h.orden?.razonSocial || '—'
+      return {
+        id: h.orden?.id ?? h.id,
+        titulo: code,
+        estado,
+        empresa: rs,
+        asignadoA: cliente,
+        evento: `Orden ${code} — ${estado}`,
+        fecha: h.createdAtRelative || (h.createdAt ?? '—'),
       }
+    })
 
-      return await response.json() as DashboardResponse;
-    } catch (error) {
-      console.error('Error in DashboardService.getDashboardData:', error);
-      throw error;
-    }
+    return { metricas, actividad, bruto: json }
   }
 }
