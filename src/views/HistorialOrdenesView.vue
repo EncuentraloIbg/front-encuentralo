@@ -64,21 +64,21 @@
         @update:options="loadItems"
         class="elevation-1"
       >
-        <template #item.rowNumber="{ index }">
+       <template v-slot:[`item.rowNumber`]="{ index }">
           {{ (page - 1) * itemsPerPage + index + 1 }}
         </template>
 
-        <template #item.estado="{ item }">
+        <template v-slot:[`item.estado`]="{ item }">
           <v-chip :color="getOrdenEstadoColor(item.estado)" size="small" class="text-uppercase">
             {{ item.estado || 'N/A' }}
           </v-chip>
         </template>
 
-        <template #item.createdAt="{ item }">
+        <template v-slot:[`item.createdAt`]="{ item }">
           {{ formatDate(item.createdAt || '') }}
         </template>
 
-        <template #item.actions="{ item }">
+        <template v-slot:[`item.actions`]="{ item }">
           <v-tooltip location="top">
             <template #activator="{ props }">
               <v-btn
@@ -126,7 +126,7 @@
             </span>
           </div>
           <v-spacer />
-          <v-chip :color="getOrdenEstadoColor(detalle?.estado)" size="small" class="text-uppercase me-2">
+          <v-chip :color="getOrdenEstadoColor(detalle?.estado || null)" size="small" class="text-uppercase me-2">
             {{ detalle?.estado || '—' }}
           </v-chip>
 
@@ -437,7 +437,7 @@
                 <v-textarea
                   v-model="motivoTexto"
                   label="Observación (requerida)"
-                  :rules="[(v)=>!!v || 'La observación es obligatoria']"
+                  :rules="[(v:string)=>!!v || 'La observación es obligatoria']"
                   rows="3"
                   auto-grow
                   variant="outlined"
@@ -492,20 +492,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import {
-  reqActualizarOrden,
-  reqCerrarOrden,
-  reqMetodosPago,
-  reqMotivosEstado,
-  reqListarOrdenes,
-  reqObtenerOrden,
-  reqRazonesSociales,
-} from '@/services/ordenesService'
+import { get, patch, post, ApiError } from '@/services/http'
 
 /** ===== ORIGEN de API & URL absolutas ===== */
-const apiBaseFromEnv = typeof import.meta !== 'undefined'
-  ? (import.meta.env?.VITE_API_BASE_URL as string | undefined)
-  : undefined
+const apiBaseFromEnv =
+  typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL as string | undefined) : undefined
 const API_ORIGIN = (apiBaseFromEnv ? apiBaseFromEnv.replace(/\/$/, '') : 'http://localhost:3333')
 function toAbsUrl(u?: string | null) {
   if (!u) return ''
@@ -514,15 +505,36 @@ function toAbsUrl(u?: string | null) {
 }
 
 /** ===== Tipos ===== */
+type OrdenEstado = 'recibido' | 'entregado' | 'cancelada' | 'rechazada'
+
+interface HistItemApi {
+  id: number
+  ordenId?: number
+  orden_id?: number
+  codigo?: string
+  code?: string
+  clienteNombre?: string
+  cliente_nombre?: string
+  cliente?: { nombre?: string } | null
+  razonSocial?: string
+  razon_social_nombre?: string
+  razon_social?: { nombre?: string } | null
+  estado?: string
+  createdAt?: string
+  created_at?: string
+  fecha?: string
+}
+
 interface HistItem {
   id: number
   ordenId?: number
   codigo: string
   clienteNombre: string
   razonSocial: string
-  estado: 'recibido' | 'entregado' | 'cancelada' | 'rechazada'
-  createdAt?: string
+  estado: OrdenEstado
+  createdAt?: string | null
 }
+
 interface OrdenDetalle {
   id: number
   codigo: string
@@ -557,6 +569,11 @@ interface OrdenDetalle {
   }>
 }
 
+interface Paginated<T> {
+  meta?: { total: number; perPage: number; currentPage: number; lastPage: number }
+  data: T[]
+}
+
 /** ===== Estado tabla y filtros ===== */
 const items = ref<HistItem[]>([])
 const totalItems = ref(0)
@@ -564,7 +581,7 @@ const loading = ref(false)
 const page = ref(1)
 const itemsPerPage = ref(10)
 const search = ref('')
-const estadoFilter = ref<string | null>(null)
+const estadoFilter = ref<OrdenEstado | null>(null)
 
 /** Razones sociales (para filtro) */
 const razonesItems = ref<Array<{ id:number; nombre:string }>>([])
@@ -620,22 +637,25 @@ function fmtMoneyNumber(v?: number | null) {
   } catch { return String(v) }
 }
 function boolTxt(v?: boolean | null) { return v ? 'Sí' : 'No' }
-function pick<T = any>(obj: any, ...keys: string[]): T | null {
-  if (!obj) return null as any
+
+/** pick fuertemente tipado */
+function pick<T = unknown>(obj: unknown, ...keys: string[]): T | null {
+  if (!obj || typeof obj !== 'object') return null
+  const rec = obj as Record<string, unknown>
   for (const k of keys) {
-    const v = (obj as any)[k]
+    const v = rec[k]
     if (v !== undefined && v !== null && v !== '') return v as T
   }
-  return null as any
+  return null
 }
-const t = (s: any) => (typeof s === 'string' ? s.trim() : s)
+const t = (s: unknown) => (typeof s === 'string' ? s.trim() : s)
 
 /** ===== Modal Detalle ===== */
 const detalleDialog = ref(false)
 const detalleLoading = ref(false)
 const detalleError = ref<string | null>(null)
 const detalle = ref<OrdenDetalle | null>(null)
-const fotosDet = computed(() => Array.isArray(detalle.value?.fotos) ? detalle.value!.fotos! : [])
+const fotosDet = computed(() => Array.isArray(detalle.value?.fotos) ? (detalle.value!.fotos as NonNullable<OrdenDetalle['fotos']>) : [])
 
 /** Preview de foto */
 const previewDialog = ref(false)
@@ -652,12 +672,9 @@ async function openDetalle(ordenId: number) {
   detalleError.value = null
   detalle.value = null
   try {
-    const { method, url } = reqObtenerOrden(ordenId)
-    const res = await fetch(url, { method })
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`)
-    detalle.value = (await res.json()) as OrdenDetalle
-  } catch (e: any) {
-    detalleError.value = e?.message || 'No fue posible cargar la orden'
+    detalle.value = await get<OrdenDetalle>(`/v1/ordenes/${ordenId}`)
+  } catch (e) {
+    detalleError.value = e instanceof ApiError ? e.message : (e as Error)?.message || 'No fue posible cargar la orden'
   } finally {
     detalleLoading.value = false
   }
@@ -681,8 +698,8 @@ const metodosLoading = ref(false)
 const motivos = ref<Array<{ id:number; nombre:string; estado_aplicable: 'entregado'|'cancelada'|'rechazada' }>>([])
 const motivosLoading = ref(false)
 
-const total = computed<number>(() => Number(pick(detalle.value, 'diagnostico_costo', 'diagnosticoCosto')) || 0)
-const pagado = computed<number>(() => Number(pick(detalle.value, 'anticipo')) || 0)
+const total = computed<number>(() => Number(pick<number>(detalle.value as unknown, 'diagnostico_costo', 'diagnosticoCosto')) || 0)
+const pagado = computed<number>(() => Number(pick<number>(detalle.value as unknown, 'anticipo')) || 0)
 const saldo = computed<number>(() => Math.max(0, total.value - pagado.value))
 const validPagoError = computed<string | null>(() => {
   if (cerrarEstado.value !== 'entregado') return null
@@ -706,7 +723,8 @@ function openCerrarDialog() {
   cerrarError.value = null
   cerrarEstado.value = 'entregado'
   pagoAhora.value = saldo.value
-  metodoPagoId.value = (pick(detalle.value?.metodo_pago, 'id') || pick(detalle.value?.metodoPago, 'id')) as any || null
+  const mpId = (pick<number>(pick(detalle.value as unknown, 'metodo_pago', 'metodoPago'), 'id')) ?? null
+  metodoPagoId.value = mpId
   motivoEstadoId.value = null
   motivoTexto.value = ''
   cerrarDialog.value = true
@@ -721,10 +739,7 @@ const motivosFiltrados = computed(() =>
 async function loadMetodosPago() {
   try {
     metodosLoading.value = true
-    const { method, url } = reqMetodosPago()
-    const res = await fetch(url, { method })
-    if (!res.ok) throw new Error(await res.text())
-    metodosPago.value = await res.json()
+    metodosPago.value = await get<Array<{ id:number; nombre:string }>>('/v1/catalogos/metodos-pago')
   } catch {
     metodosPago.value = []
   } finally {
@@ -734,10 +749,9 @@ async function loadMetodosPago() {
 async function loadMotivosEstado() {
   try {
     motivosLoading.value = true
-    const { method, url } = reqMotivosEstado()
-    const res = await fetch(url, { method })
-    if (!res.ok) throw new Error(await res.text())
-    motivos.value = await res.json()
+    motivos.value = await get<Array<{ id:number; nombre:string; estado_aplicable: 'entregado'|'cancelada'|'rechazada' }>>(
+      '/v1/catalogos/motivos-estado'
+    )
   } catch {
     motivos.value = []
   } finally {
@@ -769,49 +783,31 @@ async function confirmarCerrar() {
         if (validPagoError.value) throw new Error(validPagoError.value)
         if (!metodoPagoId.value) throw new Error('Selecciona el método de pago')
 
-        const { method, url, body } = reqActualizarOrden(detalle.value.id, {
+        await patch<OrdenDetalle>(`/v1/ordenes/${detalle.value.id}`, {
           anticipo: pagado.value + pagoAhora.value,
           metodo_pago_id: metodoPagoId.value,
-        } as any)
-        const upRes = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
         })
-        if (!upRes.ok) throw new Error(`No se pudo registrar el pago. ${upRes.status} ${await upRes.text()}`)
       }
 
-      const { method, url, body } = reqCerrarOrden(detalle.value.id, {
+      await post(`/v1/ordenes/${detalle.value.id}/cerrar`, {
         estado: 'entregado',
         fecha_cierre: nowIso,
       })
-      const closeRes = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!closeRes.ok) throw new Error(`No se pudo cerrar la orden. ${closeRes.status} ${await closeRes.text()}`)
     } else {
       if (!motivoTexto.value || !motivoTexto.value.trim()) throw new Error('La observación es obligatoria')
-      const { method, url, body } = reqCerrarOrden(detalle.value.id, {
+      await post(`/v1/ordenes/${detalle.value.id}/cerrar`, {
         estado: cerrarEstado.value,
         fecha_cierre: nowIso,
         motivo_estado_id: motivoEstadoId.value ?? null,
         motivo_estado_texto: motivoTexto.value.trim(),
-      } as any)
-      const closeRes = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
       })
-      if (!closeRes.ok) throw new Error(`No se pudo cerrar la orden. ${closeRes.status} ${await closeRes.text()}`)
     }
 
     cerrarDialog.value = false
     await refreshDetalle()
     reload()
-  } catch (e: any) {
-    cerrarError.value = e?.message || 'No fue posible cambiar el estado'
+  } catch (e) {
+    cerrarError.value = e instanceof ApiError ? e.message : (e as Error)?.message || 'No fue posible cambiar el estado'
   } finally {
     cerrarLoading.value = false
   }
@@ -821,9 +817,7 @@ async function refreshDetalle() {
   if (!detalle.value?.id) return
   try {
     detalleLoading.value = true
-    const { method, url } = reqObtenerOrden(detalle.value.id)
-    const res = await fetch(url, { method })
-    if (res.ok) detalle.value = await res.json()
+    detalle.value = await get<OrdenDetalle>(`/v1/ordenes/${detalle.value.id}`)
   } finally {
     detalleLoading.value = false
   }
@@ -846,17 +840,16 @@ async function hydrateMissingNames(current: HistItem[]) {
   await Promise.allSettled(
     need.map(async ({ id, idx }) => {
       try {
-        const { method, url } = reqObtenerOrden(id)
-        const r = await fetch(url, { method })
-        if (!r.ok) return
-        const det: any = await r.json()
+        const det = await get<OrdenDetalle>(`/v1/ordenes/${id}`)
         const cliente = t(det?.cliente?.nombre)
         const razon = t(det?.razon_social?.nombre) || t(det?.razonSocial?.nombre)
         const updated = { ...items.value[idx] }
-        if (cliente) updated.clienteNombre = cliente
-        if (razon) updated.razonSocial = razon
+        if (typeof cliente === 'string' && cliente) updated.clienteNombre = cliente
+        if (typeof razon === 'string' && razon) updated.razonSocial = razon
         items.value[idx] = updated
-      } catch {}
+      } catch {
+        /* noop */
+      }
     })
   )
 
@@ -874,33 +867,35 @@ async function loadItems(
     page.value = options.page
     itemsPerPage.value = options.itemsPerPage
 
-    const params: any = { page: page.value, perPage: itemsPerPage.value }
-    if (search.value?.trim()) params.q = search.value.trim()
-    if (estadoFilter.value) params.estado = estadoFilter.value
-    if (rsSelect.value) params.razon_social_id = rsSelect.value
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      page: page.value,
+      perPage: itemsPerPage.value,
+      q: search.value?.trim() || undefined,
+      estado: estadoFilter.value || undefined,
+      razon_social_id: rsSelect.value ?? undefined,
+    }
 
-    const { method, url } = reqListarOrdenes(params)
-    const res = await fetch(url, { method })
-    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`)
+    const resp = await get<Paginated<HistItemApi>>('/v1/ordenes', { params })
+    const data: HistItemApi[] = Array.isArray(resp?.data) ? resp.data : []
+    const meta = resp?.meta
 
-    const json = await res.json()
-    const data: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []
-    const meta = json?.meta || {}
-
-    items.value = data.map((e: any) => ({
-      id: e.id ?? e.ordenId ?? e.orden_id,
+    items.value = data.map((e) => ({
+      id: e.id ?? e.ordenId ?? (e.orden_id as number),
       ordenId: e.id ?? e.ordenId ?? e.orden_id,
-      codigo: t(e.codigo ?? e.code) || '—',
-      // intentamos varias formas y hacemos fallback si vienen vacíos
-      clienteNombre: t(e.clienteNombre) || t(e.cliente_nombre) || t(e.cliente?.nombre) || '—',
-      razonSocial:  t(e.razonSocial)  || t(e.razon_social_nombre) || t(e.razon_social?.nombre) || '—',
-      estado: (e.estado || 'recibido').toLowerCase(),
+      codigo: String(t(e.codigo ?? e.code) || '—'),
+      clienteNombre: String(
+        t(e.clienteNombre) || t(e.cliente_nombre) || t(e.cliente?.nombre) || '—'
+      ),
+      razonSocial: String(
+        t(e.razonSocial) || t(e.razon_social_nombre) || t(e.razon_social?.nombre) || '—'
+      ),
+      estado: ((e.estado || 'recibido') as string).toLowerCase() as OrdenEstado,
       createdAt: e.createdAt ?? e.created_at ?? e.fecha ?? null,
-    })) as HistItem[]
+    }))
 
     totalItems.value = meta?.total ?? data.length
 
-    // 🔁 Parche: si faltan nombres, los completamos con el endpoint de detalle
+    // Completar nombres si faltan con endpoint de detalle
     await hydrateMissingNames(items.value)
   } catch (e) {
     console.error('Error al cargar órdenes:', e)
@@ -915,11 +910,7 @@ async function loadItems(
 async function loadRazones() {
   try {
     razonesLoading.value = true
-    const { method, url } = reqRazonesSociales()
-    const res = await fetch(url, { method })
-    if (!res.ok) throw new Error(await res.text())
-    const data = (await res.json()) as Array<{ id: number; nombre: string }>
-    razonesItems.value = data
+    razonesItems.value = await get<Array<{ id: number; nombre: string }>>('/v1/catalogos/razones-sociales')
   } catch (e) {
     console.error('No se pudieron cargar razones sociales', e)
     razonesItems.value = []

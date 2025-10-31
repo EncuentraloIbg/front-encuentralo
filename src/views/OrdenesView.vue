@@ -2,7 +2,10 @@
   <v-container class="py-5">
     <v-card outlined>
       <!-- Encabezado -->
-      <v-card-title class="py-6 d-flex flex-column align-center justify-center text-center" style="border-bottom: 1px solid rgba(16,24,40,.08)">
+      <v-card-title
+        class="py-6 d-flex flex-column align-center justify-center text-center"
+        style="border-bottom: 1px solid rgba(16,24,40,.08)"
+      >
         <div class="w-100 d-flex justify-end mb-2">
           <v-select
             v-model="razon_social_id"
@@ -70,11 +73,22 @@
             </v-col>
 
             <v-col cols="12" md="3">
-              <v-text-field label="Teléfono (WhatsApp)" v-model="cliente.telefono" density="compact" hide-details="auto" />
+              <v-text-field
+                label="Teléfono (WhatsApp)"
+                v-model="cliente.telefono"
+                density="compact"
+                hide-details="auto"
+              />
             </v-col>
 
             <v-col cols="12" md="4">
-              <v-text-field label="Correo electrónico" v-model="cliente.correo" type="email" density="compact" hide-details="auto" />
+              <v-text-field
+                label="Correo electrónico"
+                v-model="cliente.correo"
+                type="email"
+                density="compact"
+                hide-details="auto"
+              />
             </v-col>
 
             <v-col cols="12" md="5">
@@ -128,11 +142,25 @@
             </v-col>
 
             <v-col cols="12" md="4">
-              <v-text-field label="Modelo" v-model="equipo.modelo" :error-messages="errors.modelo" density="compact" hide-details="auto" required />
+              <v-text-field
+                label="Modelo"
+                v-model="equipo.modelo"
+                :error-messages="errors.modelo"
+                density="compact"
+                hide-details="auto"
+                required
+              />
             </v-col>
 
             <v-col cols="12" md="4">
-              <v-text-field label="Número de serie / IMEI" v-model="equipo.serie_imei" :error-messages="errors.serie_imei" density="compact" hide-details="auto" required />
+              <v-text-field
+                label="Número de serie / IMEI"
+                v-model="equipo.serie_imei"
+                :error-messages="errors.serie_imei"
+                density="compact"
+                hide-details="auto"
+                required
+              />
             </v-col>
 
             <!-- SO / RAM / DISCO + Otro -->
@@ -263,11 +291,11 @@
                 label="Selecciona fotos"
                 density="compact"
                 hide-details="auto"
-                :counter="`${fotos.length}/3`"
+                :counter="true"
                 @update:modelValue="onFotosPicked"
               />
               <div class="text-caption text-medium-emphasis mt-1">
-                Tamaño máx: 6 MB por imagen. Formatos: JPG, PNG, WEBP, GIF.
+                {{ fotos.length }}/3 seleccionadas — Tamaño máx: 6 MB por imagen. Formatos: JPG, PNG, WEBP, GIF.
               </div>
             </v-col>
 
@@ -285,19 +313,8 @@
 
             <v-col cols="12">
               <div class="d-flex flex-wrap">
-                <v-card
-                  v-for="(f, idx) in fotos"
-                  :key="idx"
-                  class="ma-2"
-                  elevation="1"
-                  width="180"
-                >
-                  <v-img
-                    :src="f.preview || f.url"
-                    height="120"
-                    cover
-                    class="bg-grey-lighten-3"
-                  >
+                <v-card v-for="(f, idx) in fotos" :key="idx" class="ma-2" elevation="1" width="180">
+                  <v-img :src="f.preview || f.url" height="120" cover class="bg-grey-lighten-3">
                     <template #placeholder>
                       <div class="fill-height d-flex align-center justify-center text-medium-emphasis">
                         <v-progress-circular v-if="f.uploading" indeterminate size="20" class="me-2" />
@@ -324,22 +341,14 @@
                       <v-icon class="me-1">mdi-magnify</v-icon> Ver
                     </v-btn>
                     <v-spacer />
-                    <v-btn
-                      size="small"
-                      variant="text"
-                      color="error"
-                      :disabled="f.uploading"
-                      @click="eliminarFoto(idx)"
-                    >
+                    <v-btn size="small" variant="text" color="error" :disabled="f.uploading" @click="eliminarFoto(idx)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
                   </v-card-actions>
                 </v-card>
               </div>
 
-              <div v-if="fotos.length === 0" class="text-medium-emphasis">
-                Aún no has añadido fotos.
-              </div>
+              <div v-if="fotos.length === 0" class="text-medium-emphasis">Aún no has añadido fotos.</div>
             </v-col>
           </v-row>
 
@@ -355,12 +364,7 @@
               </v-card-title>
               <v-divider />
               <v-card-text class="d-flex justify-center">
-                <v-img
-                  :src="previewSrc"
-                  max-height="70vh"
-                  contain
-                  class="bg-grey-lighten-3 rounded-lg"
-                />
+                <v-img :src="previewSrc" max-height="70vh" contain class="bg-grey-lighten-3 rounded-lg" />
               </v-card-text>
             </v-card>
           </v-dialog>
@@ -382,7 +386,13 @@
             </v-col>
 
             <v-col cols="12" md="6">
-              <v-text-field label="Contraseña de acceso (si aplica)" v-model="orden.pass_desbloqueo" type="text" density="compact" hide-details="auto" />
+              <v-text-field
+                label="Contraseña de acceso (si aplica)"
+                v-model="orden.pass_desbloqueo"
+                type="text"
+                density="compact"
+                hide-details="auto"
+              />
             </v-col>
           </v-row>
 
@@ -393,17 +403,23 @@
             <v-col cols="12"><h3 class="text-subtitle-1 font-weight-bold">CONDICIONES</h3></v-col>
 
             <v-col cols="12" md="4">
-              <v-checkbox v-model="orden.autoriza_respaldo" label="¿Autoriza respaldo de datos?" hide-details/>
+              <v-checkbox v-model="orden.autoriza_respaldo" label="¿Autoriza respaldo de datos?" hide-details />
             </v-col>
             <v-col cols="12" md="4">
-              <v-checkbox v-model="orden.autoriza_apertura" label="¿Autoriza apertura del equipo?" hide-details/>
+              <v-checkbox v-model="orden.autoriza_apertura" label="¿Autoriza apertura del equipo?" hide-details />
             </v-col>
             <v-col cols="12" md="4">
-              <v-checkbox v-model="orden.mojado" label="¿Equipo con humedad/derrame?" hide-details/>
+              <v-checkbox v-model="orden.mojado" label="¿Equipo con humedad/derrame?" hide-details />
             </v-col>
 
             <v-col cols="12">
-              <v-textarea label="Observaciones adicionales" v-model="orden.observaciones_cliente" rows="3" density="compact" hide-details="auto" />
+              <v-textarea
+                label="Observaciones adicionales"
+                v-model="orden.observaciones_cliente"
+                rows="3"
+                density="compact"
+                hide-details="auto"
+              />
             </v-col>
           </v-row>
 
@@ -414,11 +430,27 @@
             <v-col cols="12"><h3 class="text-subtitle-1 font-weight-bold">VALORES</h3></v-col>
 
             <v-col cols="12" md="3">
-              <v-text-field label="Valor diagnóstico" v-model.number="orden.diagnostico_costo" prefix="$" type="number" min="0" density="compact" hide-details="auto" />
+              <v-text-field
+                label="Valor diagnóstico"
+                v-model.number="orden.diagnostico_costo"
+                prefix="$"
+                type="number"
+                min="0"
+                density="compact"
+                hide-details="auto"
+              />
             </v-col>
 
             <v-col cols="12" md="3">
-              <v-text-field label="Anticipo recibido" v-model.number="orden.anticipo" prefix="$" type="number" min="0" density="compact" hide-details="auto" />
+              <v-text-field
+                label="Anticipo recibido"
+                v-model.number="orden.anticipo"
+                prefix="$"
+                type="number"
+                min="0"
+                density="compact"
+                hide-details="auto"
+              />
             </v-col>
 
             <v-col cols="12" md="3">
@@ -453,7 +485,11 @@
               <v-checkbox v-model="confirmDatos" label="Confirmo que los datos fueron revisados" hide-details />
             </v-col>
             <v-col cols="12" md="6">
-              <v-checkbox v-model="confirmAccesorios" label="Confirmo que se recibieron únicamente los accesorios listados" hide-details />
+              <v-checkbox
+                v-model="confirmAccesorios"
+                label="Confirmo que se recibieron únicamente los accesorios listados"
+                hide-details
+              />
             </v-col>
           </v-row>
 
@@ -476,13 +512,23 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
+import { upload, ApiError } from '@/services/http'
+import {
+  crearOrden as svcCrearOrden,
+  tiposEquipo as svcTiposEquipo,
+  accesorios as svcAccesorios,
+  metodosPago as svcMetodosPago,
+  siguienteConsecutivo as svcSiguienteConsecutivo,
+  type CrearOrdenPayload as SvcCrearOrdenPayload,
+} from '@/services/OrdenesService'
 
-/* ===== Tipos ===== */
+/* ===== Tipos de catálogos ===== */
 type Catalogo = { id: number; nombre: string; logo?: string; prefijo?: string; logoWidth?: number }
 type AccesorioItem = { id: number; nombre: string }
 type MetodoPagoItem = { id: number; nombre: string }
 type TipoEquipoItem = { id: number; nombre: string }
 
+/* ===== Payloads form (local) ===== */
 type ClientePayload = {
   nombre: string
   documento: string
@@ -492,7 +538,7 @@ type ClientePayload = {
   whatsapp_opt_in?: boolean
   tipo_cliente?: 'persona' | 'empresa' | null
 }
-type EquipoPayload = {
+type EquipoForm = {
   tipo_equipo_id: number | null
   marca: string
   modelo: string
@@ -512,41 +558,19 @@ type OrdenPayload = {
   metodo_pago_id?: number | null
   fecha_entrega_acordada?: string | null
 }
-type CrearOrdenPayload = {
-  razon_social_id: number
-  cliente: ClientePayload
-  equipo: EquipoPayload
-  orden?: OrdenPayload
-  accesorios?: Array<{ accesorio_id: number; detalle?: string | null }>
-  fotos?: Array<{ url: string; descripcion?: string | null }>
-}
-type CrearOrdenResponse = { id: number; codigo: string; consecutivo: number; estado: 'recibido' | 'entregado' | 'cancelada' | 'rechazada' }
-type PaginatedOrdenes = { data: Array<{ consecutivo: number }> }
 
 /* ===== Helpers ===== */
 function getJsonMessage(u: unknown): string | null {
-  if (typeof u === 'object' && u && 'message' in u) {
-    const m = (u as any).message
+  if (typeof u === 'object' && u && 'message' in (u as Record<string, unknown>)) {
+    const m = (u as Record<string, unknown>).message
     if (typeof m === 'string') return m
   }
   return null
 }
 function errorMessage(err: unknown) {
+  if (err instanceof ApiError) return err.message
   if (err instanceof Error) return err.message
   return getJsonMessage(err) ?? String(err)
-}
-
-/* ===== API BASE ===== */
-const apiBaseFromEnv = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL as string | undefined) : undefined
-const API_BASE = (apiBaseFromEnv ? apiBaseFromEnv.replace(/\/$/, '') : 'http://localhost:3333')
-
-async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const headers: HeadersInit = { 'Content-Type': 'application/json', ...(init?.headers ?? {}) }
-  const res = await fetch(url, { ...init, headers })
-  const ct = res.headers.get('content-type') ?? ''
-  const data = ct.includes('application/json') ? await res.json() : await res.text()
-  if (!res.ok) throw new Error(getJsonMessage(data) ?? `HTTP ${res.status}`)
-  return data as T
 }
 
 /* ===== Logos demo ===== */
@@ -555,15 +579,21 @@ import logoMundosmartphone from '@/assets/Mundosmartphone.png?url'
 
 /* ===== Razones sociales (demo) ===== */
 const razonesSociales = ref<Catalogo[]>([
-  { id: 1, nombre: 'Encuentralo.com',  logo: logoEncuentralo,     prefijo: 'OEC', logoWidth: 160 },
-  { id: 2, nombre: 'Mundosmartphone',  logo: logoMundosmartphone,  prefijo: 'OGC', logoWidth: 320 },
+  { id: 1, nombre: 'Encuentralo.com', logo: logoEncuentralo, prefijo: 'OEC', logoWidth: 160 },
+  { id: 2, nombre: 'Mundosmartphone', logo: logoMundosmartphone, prefijo: 'OGC', logoWidth: 320 },
 ])
 const razon_social_id = ref<number>(1)
 
-const razonSocialNombre = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.nombre ?? 'Razón social')
-const razonSocialLogo = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.logo ?? null)
-const razonSocialPrefijo = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.prefijo ?? undefined)
-const razonSocialLogoWidth = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.logoWidth ?? 160)
+const razonSocialNombre = computed(
+  () => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.nombre ?? 'Razón social'
+)
+const razonSocialLogo = computed(() => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.logo ?? null)
+const razonSocialPrefijo = computed(
+  () => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.prefijo ?? undefined
+)
+const razonSocialLogoWidth = computed(
+  () => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.logoWidth ?? 160
+)
 
 /* ===== Código preview ===== */
 const consecutivoPreview = ref<number | null>(null)
@@ -577,33 +607,93 @@ const consecutivoPreviewText = computed(() => {
 
 async function obtenerSiguienteConsecutivo(razonId: number) {
   try {
-    const d = await apiJson<{ siguiente: number; codigo_preview: string }>(`${API_BASE}/api/v1/ordenes/siguiente-consecutivo?razon_social_id=${razonId}`)
-    consecutivoPreview.value = d.siguiente
-    return
-  } catch {}
-  try {
-    const r = await apiJson<PaginatedOrdenes>(`${API_BASE}/api/v1/ordenes?page=1&perPage=1&razon_social_id=${razonId}`)
-    consecutivoPreview.value = Number(r.data?.[0]?.consecutivo ?? 0) + 1
-  } catch { consecutivoPreview.value = null }
+    const d = await svcSiguienteConsecutivo(razonId) // { consecutivo, codigo }
+    consecutivoPreview.value = d.consecutivo
+  } catch {
+    consecutivoPreview.value = null
+  }
 }
 
 /* ===== Form state ===== */
-const cliente = ref<ClientePayload>({ nombre: '', documento: '', telefono: '', correo: '', direccion: '', whatsapp_opt_in: false, tipo_cliente: 'persona' })
-const equipo = ref<EquipoPayload>({ tipo_equipo_id: null, marca: '', modelo: '', serie_imei: '', specs: '' })
-const orden = ref<OrdenPayload>({ estado_estetico: '', fallo_reportado: '', observaciones_cliente: '', pass_desbloqueo: '', autoriza_respaldo: false, autoriza_apertura: false, mojado: false, diagnostico_costo: null, anticipo: null, metodo_pago_id: null, fecha_entrega_acordada: null })
+const cliente = ref<ClientePayload>({
+  nombre: '',
+  documento: '',
+  telefono: '',
+  correo: '',
+  direccion: '',
+  whatsapp_opt_in: false,
+  tipo_cliente: 'persona',
+})
+const equipo = ref<EquipoForm>({
+  tipo_equipo_id: null,
+  marca: '',
+  modelo: '',
+  serie_imei: '',
+  specs: '',
+})
+const orden = ref<OrdenPayload>({
+  estado_estetico: '',
+  fallo_reportado: '',
+  observaciones_cliente: '',
+  pass_desbloqueo: '',
+  autoriza_respaldo: false,
+  autoriza_apertura: false,
+  mojado: false,
+  diagnostico_costo: null,
+  anticipo: null,
+  metodo_pago_id: null,
+  fecha_entrega_acordada: null,
+})
 
 /* ===== Marcas dinámicas ===== */
-const PC_BRANDS = ['Acer','ASUS','Dell','HP','Lenovo','MSI','Apple','Samsung','Toshiba','Huawei','Razer','Microsoft (Surface)','Alienware','Gigabyte','Sony','LG'] as const
-const PHONE_BRANDS = ['Samsung','Apple (iPhone)','Xiaomi','Huawei','Motorola','Nokia','OPPO','Vivo','OnePlus','Sony','ZTE','Realme','Google (Pixel)','Honor','Tecno','Infinix','LG','ASUS (ROG)','Lenovo'] as const
+const PC_BRANDS = [
+  'Acer',
+  'ASUS',
+  'Dell',
+  'HP',
+  'Lenovo',
+  'MSI',
+  'Apple',
+  'Samsung',
+  'Toshiba',
+  'Huawei',
+  'Razer',
+  'Microsoft (Surface)',
+  'Alienware',
+  'Gigabyte',
+  'Sony',
+  'LG',
+] as const
+const PHONE_BRANDS = [
+  'Samsung',
+  'Apple (iPhone)',
+  'Xiaomi',
+  'Huawei',
+  'Motorola',
+  'Nokia',
+  'OPPO',
+  'Vivo',
+  'OnePlus',
+  'Sony',
+  'ZTE',
+  'Realme',
+  'Google (Pixel)',
+  'Honor',
+  'Tecno',
+  'Infinix',
+  'LG',
+  'ASUS (ROG)',
+  'Lenovo',
+] as const
 const OTHER_OPTION = 'Otro'
 const brandSelected = ref<string | null>(null)
 const brandOther = ref('')
 
 const tiposEquipo = ref<TipoEquipoItem[]>([])
-const selectedTipo = computed(() => tiposEquipo.value.find(t => t.id === (equipo.value.tipo_equipo_id ?? -1)))
+const selectedTipo = computed(() => tiposEquipo.value.find((t) => t.id === (equipo.value.tipo_equipo_id ?? -1)))
 const tipoNombre = computed(() => (selectedTipo.value?.nombre ?? '').toLowerCase())
 const isPhoneType = computed(() => /cel|móvi|smart|tel[eé]fono/.test(tipoNombre.value))
-const isPcType    = computed(() => /pc|laptop|port[aá]til|computador|notebook|desktop/.test(tipoNombre.value))
+const isPcType = computed(() => /pc|laptop|port[aá]til|computador|notebook|desktop/.test(tipoNombre.value))
 
 const brandOptions = computed(() => {
   let base: readonly string[]
@@ -612,19 +702,31 @@ const brandOptions = computed(() => {
   else base = [...new Set([...PC_BRANDS, ...PHONE_BRANDS])]
   return [...base, OTHER_OPTION]
 })
-watch(brandSelected, v => { if (v !== OTHER_OPTION) brandOther.value = '' })
-const equipoMarcaEffective = computed(() => (brandSelected.value === OTHER_OPTION ? brandOther.value : brandSelected.value) || '')
+watch(brandSelected, (v) => {
+  if (v !== OTHER_OPTION) brandOther.value = ''
+})
+const equipoMarcaEffective = computed(
+  () => (brandSelected.value === OTHER_OPTION ? brandOther.value : brandSelected.value) || ''
+)
 
 /* ===== SO / RAM / DISCO ===== */
-const soOpciones = ['Windows 8','Windows 10','Windows 11','Ubuntu','Android','iOS','Otro'] as const
-const ramOpciones = ['2 GB','4 GB','8 GB','16 GB','32 GB','Otro'] as const
-const discoOpciones = ['128 GB','240 GB','256 GB','500 GB','512 GB','1 TB','2 TB','Otro'] as const
+const soOpciones = ['Windows 8', 'Windows 10', 'Windows 11', 'Ubuntu', 'Android', 'iOS', 'Otro'] as const
+type SoOpcion = (typeof soOpciones)[number]
+const ramOpciones = ['2 GB', '4 GB', '8 GB', '16 GB', '32 GB', 'Otro'] as const
+type RamOpcion = (typeof ramOpciones)[number]
+const discoOpciones = ['128 GB', '240 GB', '256 GB', '500 GB', '512 GB', '1 TB', '2 TB', 'Otro'] as const
+type DiscoOpcion = (typeof discoOpciones)[number]
 
-const soSeleccionado = ref<string | null>(null); const soOtroDetalle = ref('')
-const ramSeleccionado = ref<string | null>(null); const ramOtroDetalle = ref('')
-const discoSeleccionado = ref<string | null>(null); const discoOtroDetalle = ref('')
+const soSeleccionado = ref<SoOpcion | null>(null)
+const soOtroDetalle = ref('')
+const ramSeleccionado = ref<RamOpcion | null>(null)
+const ramOtroDetalle = ref('')
+const discoSeleccionado = ref<DiscoOpcion | null>(null)
+const discoOtroDetalle = ref('')
 
-function withRamLabel(v: string) { return v.toLowerCase().includes('ram') ? v : `${v} RAM` }
+function withRamLabel(v: string) {
+  return v.toLowerCase().includes('ram') ? v : `${v} RAM`
+}
 const specsPreview = computed(() => {
   const parts: string[] = []
   const so = (soSeleccionado.value === 'Otro' ? soOtroDetalle.value : soSeleccionado.value) || ''
@@ -635,40 +737,55 @@ const specsPreview = computed(() => {
   if (disco.trim()) parts.push(disco.trim())
   return parts.filter(Boolean).join(', ')
 })
-watch([soSeleccionado,soOtroDetalle,ramSeleccionado,ramOtroDetalle,discoSeleccionado,discoOtroDetalle], () => { equipo.value.specs = specsPreview.value })
+watch([soSeleccionado, soOtroDetalle, ramSeleccionado, ramOtroDetalle, discoSeleccionado, discoOtroDetalle], () => {
+  equipo.value.specs = specsPreview.value
+})
 
 /* ===== Estado físico ===== */
-const estadoFisicoOpciones = ['Sin golpes','Rayones leves','Golpes en esquinas','Pantalla rota','Pantalla con rayones','Tapa trasera dañada','Bisagras sueltas','Puertos con juego','Huellas de humedad','Oxidación visible','Otro'] as const
-const estadoFisicoSeleccionado = ref<string[]>([])
+const estadoFisicoOpciones = [
+  'Sin golpes',
+  'Rayones leves',
+  'Golpes en esquinas',
+  'Pantalla rota',
+  'Pantalla con rayones',
+  'Tapa trasera dañada',
+  'Bisagras sueltas',
+  'Puertos con juego',
+  'Huellas de humedad',
+  'Oxidación visible',
+  'Otro',
+] as const
+type EstadoFisicoOpcion = (typeof estadoFisicoOpciones)[number]
+const estadoFisicoSeleccionado = ref<EstadoFisicoOpcion[]>([])
 const estadoFisicoOtroDetalle = ref('')
 function estadoFisicoToText() {
   const list = [...estadoFisicoSeleccionado.value]
   const idx = list.indexOf('Otro')
-  if (idx >= 0 && estadoFisicoOtroDetalle.value.trim()) list[idx] = `Otro: ${estadoFisicoOtroDetalle.value.trim()}`
+  if (idx >= 0 && estadoFisicoOtroDetalle.value.trim()) list[idx] = `Otro: ${estadoFisicoOtroDetalle.value.trim()}` as EstadoFisicoOpcion
   return list.join(', ')
 }
 
-/* ===== Accesorios / Métodos pago ===== */
+/* ===== Accesorios / Métodos de pago ===== */
 const accesorios = ref<AccesorioItem[]>([])
 const metodosPago = ref<MetodoPagoItem[]>([])
 const accesoriosSeleccionados = ref<number[]>([])
 const ACCESORIO_OTRO_ID = -99 as const
 const accesorioOpciones = computed<AccesorioItem[]>(() => {
-  const other: AccesorioItem = { id: ACCESORIO_OTRO_ID as unknown as number, nombre: 'Otro' }
+  const other: AccesorioItem = { id: (ACCESORIO_OTRO_ID as unknown) as number, nombre: 'Otro' }
   return [...accesorios.value, other]
 })
 
 /* ===== FOTOS ===== */
 type FotoItem = {
   file: File
-  preview: string   // Object URL para vista previa local
-  url?: string      // URL devuelta por el backend
+  preview: string
+  url?: string
   uploading: boolean
   error?: string
   descripcion?: string
 }
 const fotos = ref<FotoItem[]>([])
-const fotosPicked = ref<File[] | null>(null)
+const fotosPicked = ref<File[] | File | null>(null)
 
 const previewDialog = ref(false)
 const previewSrc = ref<string>('')
@@ -690,63 +807,79 @@ function eliminarFoto(idx: number) {
 
 const MAX_FOTOS = 3
 const MAX_MB = 6
-const ACEPTADOS = ['image/jpeg','image/png','image/webp','image/gif']
+const ACEPTADOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
 
-function onFotosPicked(files: File[] | null) {
-  if (!files || files.length === 0) return
+function onFotosPicked(files: File | File[]) {
+  const incoming = Array.isArray(files) ? files : files ? [files] : []
+  if (incoming.length === 0) return
   const espacio = MAX_FOTOS - fotos.value.length
-  const lote = Array.from(files).slice(0, Math.max(0, espacio))
+  const lote = incoming.slice(0, Math.max(0, espacio))
 
   for (const file of lote) {
-    if (!ACEPTADOS.includes(file.type)) { snackbar.value = { show: true, message: 'Formato no permitido', color: 'error' }; continue }
-    if (file.size > MAX_MB * 1024 * 1024) { snackbar.value = { show: true, message: `La imagen supera ${MAX_MB}MB`, color: 'error' }; continue }
+    if (!ACEPTADOS.includes(file.type as (typeof ACEPTADOS)[number])) {
+      snackbar.value = { show: true, message: 'Formato no permitido', color: 'error' }
+      continue
+    }
+    if (file.size > MAX_MB * 1024 * 1024) {
+      snackbar.value = { show: true, message: `La imagen supera ${MAX_MB}MB`, color: 'error' }
+      continue
+    }
 
     const item: FotoItem = { file, preview: URL.createObjectURL(file), uploading: true }
     fotos.value.push(item)
     subirFoto(item)
   }
 
-  // limpiar input
+  // limpiar input (opcional)
   fotosPicked.value = null
 }
 
 async function subirFoto(item: FotoItem) {
   try {
     const fd = new FormData()
-    fd.append('foto', item.file) // tu UploadsController puede aceptar 'foto' (una por request)
-    const res = await fetch(`${API_BASE}/api/v1/uploads/fotos`, { method: 'POST', body: fd })
-    const ct = res.headers.get('content-type') ?? ''
-    const data: any = ct.includes('application/json') ? await res.json() : await res.text()
-    if (!res.ok) throw new Error(getJsonMessage(data) ?? `HTTP ${res.status}`)
-
-    // acepta { url } o { urls: ["..."] } o { data: [{url: "..."}] }
-    item.url = data?.url || data?.urls?.[0] || data?.data?.[0]?.url
-    if (!item.url) throw new Error('La API no devolvió URL')
-
+    fd.append('foto', item.file) // endpoint espera 'foto'
+    const res = await upload<{ url?: string; urls?: string[]; data?: Array<{ url: string }> }>('/v1/uploads/fotos', fd)
+    const url = res.url || res.urls?.[0] || res.data?.[0]?.url
+    if (!url) throw new Error('La API no devolvió URL')
+    item.url = url
     item.error = undefined
-  } catch (e) {
-    item.error = errorMessage(e)
+  } catch (err) {
+    item.error = errorMessage(err)
     snackbar.value = { show: true, message: `Error subiendo foto: ${item.error}`, color: 'error' }
   } finally {
     item.uploading = false
   }
 }
 
-const hayFotosSubiendo = computed(() => fotos.value.some(f => f.uploading))
-const hayFotosFallidas = computed(() => fotos.value.some(f => f.error))
+const hayFotosSubiendo = computed(() => fotos.value.some((f) => f.uploading))
+const hayFotosFallidas = computed(() => fotos.value.some((f) => f.error))
 const subiendoBloqueado = computed(() => !hayFotosFallidas.value)
 const textoBotonSubida = computed(() => (hayFotosFallidas.value ? 'Reintentar fallidas' : 'Subiendo…'))
 function reintentarFallidas() {
   for (const f of fotos.value) {
-    if (f.error) { f.error = undefined; f.uploading = true; subirFoto(f) }
+    if (f.error) {
+      f.error = undefined
+      f.uploading = true
+      subirFoto(f)
+    }
   }
 }
 
 /* = revoke object urls al desmontar */
-onBeforeUnmount(() => { fotos.value.forEach(f => revokePreview(f.preview)) })
+onBeforeUnmount(() => {
+  fotos.value.forEach((f) => revokePreview(f.preview))
+})
 
 /* ===== Validación ===== */
-const errors = ref<Record<string, string>>({ nombre: '', documento: '', tipo_equipo_id: '', marca: '', modelo: '', serie_imei: '', fallo_reportado: '' })
+const errors = ref<Record<string, string>>({
+  nombre: '',
+  documento: '',
+  tipo_equipo_id: '',
+  marca: '',
+  modelo: '',
+  serie_imei: '',
+  fallo_reportado: '',
+})
 function validate() {
   errors.value = {
     nombre: cliente.value.nombre?.trim() ? '' : 'Nombre es obligatorio.',
@@ -771,21 +904,20 @@ function toIsoOrNull(local: string) {
 
 /* ===== Snackbar ===== */
 type SnackColor = 'success' | 'error' | 'warning'
-const snackbar = ref<{ show: boolean; message: string; color: SnackColor }>({ show: false, message: '', color: 'success' })
+const snackbar = ref<{ show: boolean; message: string; color: SnackColor }>({
+  show: false,
+  message: '',
+  color: 'success',
+})
 
 /* ===== Confirmaciones ===== */
 const confirmDatos = ref(false)
 const confirmAccesorios = ref(false)
 
 /* ===== Carga catálogos ===== */
-const accesoriosDetalle = ref<string>('') // (se mantiene por si lo usas luego)
 async function cargarCatalogos() {
   try {
-    const [tip, acc, mp] = await Promise.all([
-      apiJson<TipoEquipoItem[]>(`${API_BASE}/api/v1/catalogos/tipos-equipo`),
-      apiJson<AccesorioItem[]>(`${API_BASE}/api/v1/catalogos/accesorios`),
-      apiJson<MetodoPagoItem[]>(`${API_BASE}/api/v1/catalogos/metodos-pago`),
-    ])
+    const [tip, acc, mp] = await Promise.all([svcTiposEquipo(), svcAccesorios(), svcMetodosPago()])
     tiposEquipo.value = tip
     accesorios.value = acc
     metodosPago.value = mp
@@ -797,7 +929,11 @@ async function cargarCatalogos() {
 /* ===== Submit ===== */
 async function onSubmit() {
   if (!confirmDatos.value || !confirmAccesorios.value) {
-    snackbar.value = { show: true, message: 'Debes confirmar la revisión de datos y de accesorios.', color: 'warning' }
+    snackbar.value = {
+      show: true,
+      message: 'Debes confirmar la revisión de datos y de accesorios.',
+      color: 'warning',
+    }
     return
   }
   if (!validate()) {
@@ -808,7 +944,7 @@ async function onSubmit() {
   equipo.value.marca = equipoMarcaEffective.value.trim()
   equipo.value.specs = specsPreview.value || undefined
 
-  const payload: CrearOrdenPayload = {
+  const payload: SvcCrearOrdenPayload = {
     razon_social_id: razon_social_id.value,
     cliente: {
       nombre: cliente.value.nombre?.trim(),
@@ -820,7 +956,7 @@ async function onSubmit() {
       tipo_cliente: cliente.value.tipo_cliente ?? null,
     },
     equipo: {
-      tipo_equipo_id: equipo.value.tipo_equipo_id as number,
+      tipo_equipo_id: equipo.value.tipo_equipo_id as number, // validado en form
       marca: equipo.value.marca,
       modelo: equipo.value.modelo?.trim(),
       serie_imei: equipo.value.serie_imei?.trim(),
@@ -839,13 +975,16 @@ async function onSubmit() {
       metodo_pago_id: orden.value.metodo_pago_id ?? null,
       fecha_entrega_acordada: toIsoOrNull(fechaEntregaLocal.value),
     },
-    accesorios: (accesoriosSeleccionados.value || []).filter(id => id > 0).map(id => ({ accesorio_id: id })),
-    // solo enviamos fotos que ya tengan URL del backend
-    fotos: fotos.value.filter(f => f.url).map(f => ({ url: f.url as string, descripcion: f.descripcion })),
+    accesorios: (accesoriosSeleccionados.value || [])
+      .filter((id) => id > 0)
+      .map((id) => ({ accesorio_id: id })),
+    fotos: fotos.value
+      .filter((f) => f.url)
+      .map((f) => ({ url: f.url as string, descripcion: f.descripcion })),
   }
 
   try {
-    const data = await apiJson<CrearOrdenResponse>(`${API_BASE}/api/v1/ordenes`, { method: 'POST', body: JSON.stringify(payload) })
+    const data = await svcCrearOrden(payload)
     snackbar.value = { show: true, message: `Orden creada: ${data.codigo}`, color: 'success' }
     await obtenerSiguienteConsecutivo(razon_social_id.value)
     resetForm()
@@ -856,56 +995,92 @@ async function onSubmit() {
 
 /* ===== Reset ===== */
 function resetForm() {
-  cliente.value = { nombre: '', documento: '', telefono: '', correo: '', direccion: '', whatsapp_opt_in: false, tipo_cliente: 'persona' }
+  cliente.value = {
+    nombre: '',
+    documento: '',
+    telefono: '',
+    correo: '',
+    direccion: '',
+    whatsapp_opt_in: false,
+    tipo_cliente: 'persona',
+  }
   equipo.value = { tipo_equipo_id: null, marca: '', modelo: '', serie_imei: '', specs: '' }
 
-  brandSelected.value = null; brandOther.value = ''
-  soSeleccionado.value = null; soOtroDetalle.value = ''
-  ramSeleccionado.value = null; ramOtroDetalle.value = ''
-  discoSeleccionado.value = null; discoOtroDetalle.value = ''
+  brandSelected.value = null
+  brandOther.value = ''
+  soSeleccionado.value = null
+  soOtroDetalle.value = ''
+  ramSeleccionado.value = null
+  ramOtroDetalle.value = ''
+  discoSeleccionado.value = null
+  discoOtroDetalle.value = ''
 
-  fotos.value.forEach(f => revokePreview(f.preview))
+  fotos.value.forEach((f) => revokePreview(f.preview))
   fotos.value = []
   fotosPicked.value = null
 
-  orden.value = { estado_estetico: '', fallo_reportado: '', observaciones_cliente: '', pass_desbloqueo: '', autoriza_respaldo: false, autoriza_apertura: false, mojado: false, diagnostico_costo: null, anticipo: null, metodo_pago_id: null, fecha_entrega_acordada: null }
-  estadoFisicoSeleccionado.value = []; estadoFisicoOtroDetalle.value = ''
+  orden.value = {
+    estado_estetico: '',
+    fallo_reportado: '',
+    observaciones_cliente: '',
+    pass_desbloqueo: '',
+    autoriza_respaldo: false,
+    autoriza_apertura: false,
+    mojado: false,
+    diagnostico_costo: null,
+    anticipo: null,
+    metodo_pago_id: null,
+    fecha_entrega_acordada: null,
+  }
+  estadoFisicoSeleccionado.value = []
+  estadoFisicoOtroDetalle.value = ''
   accesoriosSeleccionados.value = []
   fechaEntregaLocal.value = ''
-  confirmDatos.value = false; confirmAccesorios.value = false
+  confirmDatos.value = false
+  confirmAccesorios.value = false
 }
 
 /* ===== Lifecycle ===== */
 onMounted(async () => {
   await Promise.all([cargarCatalogos(), obtenerSiguienteConsecutivo(razon_social_id.value)])
 })
-watch(razon_social_id, async (val) => { await obtenerSiguienteConsecutivo(val) })
+watch(razon_social_id, async (val) => {
+  await obtenerSiguienteConsecutivo(val)
+})
 </script>
 
 <style scoped>
-.form { padding: 1rem; }
-.text-h5, .text-h6 { color: #1976D2; font-weight: bold; }
+.form {
+  padding: 1rem;
+}
+.text-h5,
+.text-h6 {
+  color: #1976d2;
+  font-weight: bold;
+}
 
 /* Panel suave para “zebra” por sección */
-.soft-block{
-  background:#f7f9fb;
-  border:1px solid rgba(16,24,40,.06);
-  border-radius:14px;
-  padding:18px;
+.soft-block {
+  background: #f7f9fb;
+  border: 1px solid rgba(16, 24, 40, 0.06);
+  border-radius: 14px;
+  padding: 18px;
 }
 
 /* Toques grises en campos sin cambiar props */
 :deep(.v-text-field .v-field),
 :deep(.v-select .v-field),
-:deep(.v-textarea .v-field){
-  background:#fafbfc;
-  border-radius:10px;
+:deep(.v-textarea .v-field) {
+  background: #fafbfc;
+  border-radius: 10px;
 }
-:deep(.v-field.v-field--variant-outlined){
-  --v-field-border-opacity:.28;
+:deep(.v-field.v-field--variant-outlined) {
+  --v-field-border-opacity: 0.28;
 }
-:deep(.v-field--focused){
-  --v-field-border-opacity:.5;
+:deep(.v-field--focused) {
+  --v-field-border-opacity: 0.5;
 }
-:deep(.v-divider){ opacity:.7; }
+:deep(.v-divider) {
+  opacity: 0.7;
+}
 </style>

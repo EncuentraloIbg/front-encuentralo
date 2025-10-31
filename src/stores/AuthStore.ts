@@ -1,79 +1,7 @@
 // src/stores/AuthStore.ts
 import router from '@/router'
 import { defineStore } from 'pinia'
-
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-
-interface HttpErrorShape {
-  status: number
-  statusText: string
-  message: string
-  data?: unknown
-}
-class HttpError extends Error implements HttpErrorShape {
-  status: number
-  statusText: string
-  data?: unknown
-  constructor(init: HttpErrorShape) {
-    super(init.message)
-    this.name = 'HttpError'
-    this.status = init.status
-    this.statusText = init.statusText
-    this.data = init.data
-  }
-}
-
-function getBaseUrl(): string {
-  const raw = (import.meta as any)?.env?.VITE_API_BASE_URL ?? 'http://localhost:3333'
-  return String(raw).replace(/\/$/, '')
-}
-const API_BASE = `${getBaseUrl()}/api/v1`
-
-function getAuthHeader(): Record<string, string> {
-  const token = localStorage.getItem('token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-function isFormData(v: unknown): v is FormData {
-  return typeof FormData !== 'undefined' && v instanceof FormData
-}
-function safeJson(text: string): unknown {
-  try { return text ? JSON.parse(text) : undefined } catch { return undefined }
-}
-
-async function httpRequest<T>(
-  path: string,
-  opts?: { method?: HttpMethod; body?: unknown; signal?: AbortSignal; headers?: Record<string, string> }
-): Promise<T> {
-  const method = opts?.method ?? 'GET'
-  const body = opts?.body
-  const form = isFormData(body)
-
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      ...(form ? {} : { 'Content-Type': 'application/json' }),
-      ...getAuthHeader(),
-      ...(opts?.headers ?? {}),
-    },
-    body: form ? (body as any) : body !== undefined ? JSON.stringify(body) : undefined,
-    signal: opts?.signal,
-  })
-
-  if (res.status === 204) return undefined as unknown as T
-
-  const text = await res.text()
-  const data = safeJson(text)
-
-  if (!res.ok) {
-    const message =
-      data && typeof data === 'object' && 'message' in (data as any) && typeof (data as any).message === 'string'
-        ? (data as any).message
-        : `HTTP ${res.status} ${res.statusText}`
-
-    throw new HttpError({ status: res.status, statusText: res.statusText, message, data })
-  }
-  return data as T
-}
+import { post, get, request, ApiError } from '@/services/http'
 
 /* Tipos */
 export interface User {
@@ -96,6 +24,7 @@ interface ApiUser {
 }
 
 interface LoginResponse {
+  type?: 'bearer'
   token: string
   user: ApiUser
 }
@@ -121,16 +50,22 @@ function mapApiUser(apiUser: ApiUser): User {
 }
 
 function getErrorMessage(err: unknown): string {
-  if (err instanceof HttpError) return err.message
+  if (err instanceof ApiError) return `${err.status}: ${err.message}`
   if (err instanceof Error) return err.message
   return 'Error desconocido'
+}
+
+/** Helper: header Authorization desde localStorage */
+function buildAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 export const authSetStore = defineStore('auth', {
   state: () => {
     let user: User | null = null
     let token: string | null = null
-    let avatarStamp = Date.now() // para cache-busting en imágenes
+    let avatarStamp = Date.now()
     try {
       const storedUser = localStorage.getItem('user')
       const storedToken = localStorage.getItem('token')
@@ -139,18 +74,29 @@ export const authSetStore = defineStore('auth', {
       if (storedToken) token = String(storedToken)
       if (storedStamp) avatarStamp = Number(storedStamp)
     } catch (error) {
-      console.error('Error al parsear estado desde localStorage:', error)
+      console.error('AuthStore: error al restaurar desde localStorage:', error)
     }
     return { user, token, avatarStamp }
   },
 
   actions: {
+    /** Login: envía { correo, password } normalizados */
     async login(userData: { email: string; password: string }): Promise<boolean> {
       try {
-        const body = { correo: userData.email, password: userData.password }
-        const res = await httpRequest<LoginResponse>('/login', { method: 'POST', body })
+        const body = {
+          correo: (userData.email ?? '').trim().toLowerCase(),
+          password: (userData.password ?? '').trim(),
+        }
 
+        // Log ligero del payload (sin password)
+        console.log('[AUTH] login →', {
+          correo: body.correo,
+          passwordLen: body.password.length,
+        })
+
+        const res = await post<LoginResponse, typeof body>('/v1/login', body)
         const user = mapApiUser(res.user)
+
         this.token = res.token
         this.user = user
         this.avatarStamp = Date.now()
@@ -159,10 +105,12 @@ export const authSetStore = defineStore('auth', {
         localStorage.setItem('user', JSON.stringify(user))
         localStorage.setItem('avatarStamp', String(this.avatarStamp))
 
+        console.log('[AUTH] login ← OK', { user: user.email })
+
         router.push('/dashboard')
         return true
       } catch (e: unknown) {
-        console.error('AuthStore.login:', getErrorMessage(e))
+        console.error('[AUTH] login ← FAIL', getErrorMessage(e))
         return false
       }
     },
@@ -176,6 +124,7 @@ export const authSetStore = defineStore('auth', {
       router.push('/login')
     },
 
+    /** Verifica y rellena el usuario si hay token */
     async checkAuth() {
       if (!this.token) return
 
@@ -186,21 +135,25 @@ export const authSetStore = defineStore('auth', {
       }
 
       try {
-        const response = await httpRequest<MeResponse>('/me', { method: 'GET' })
-        if (!response.user) return
+        const me = await get<MeResponse>('/v1/me', {
+          headers: { ...buildAuthHeaders() },
+        })
+        if (!me.user) return
 
-        this.user = mapApiUser(response.user)
+        this.user = mapApiUser(me.user)
         localStorage.setItem('user', JSON.stringify(this.user))
       } catch (error: unknown) {
-        if (error instanceof HttpError && (error.status === 401 || error.status === 419)) {
+        const msg = getErrorMessage(error)
+        if (error instanceof ApiError && (error.status === 401 || error.status === 419)) {
+          console.warn('[AUTH] checkAuth → no autorizado, cerrando sesión')
           this.logout()
         } else {
-          console.warn('checkAuth:', getErrorMessage(error))
+          console.warn('[AUTH] checkAuth WARN', msg)
         }
       }
     },
 
-    /** Actualiza MI perfil y refresca el store (además, hace bust de caché del avatar) */
+    /** Actualiza MI perfil y refresca el store (además, bust de caché del avatar) */
     async updateMyProfile(payload: {
       nombres?: string
       apellidos?: string
@@ -208,14 +161,18 @@ export const authSetStore = defineStore('auth', {
       direccion?: string
       avatar_url?: string | null
     }) {
-      // PUT /api/v1/usuarios/me  👈 esta ruta debe existir
-      await httpRequest('/usuarios/me', { method: 'PUT', body: payload })
+      // PUT /api/v1/usuarios/me (requiere Authorization)
+      await request('PUT', '/v1/usuarios/me', payload, {
+        headers: { ...buildAuthHeaders(), 'Content-Type': 'application/json' },
+      })
 
       // refresca /me y guarda
-      const me = await httpRequest<MeResponse>('/me', { method: 'GET' })
+      const me = await get<MeResponse>('/v1/me', {
+        headers: { ...buildAuthHeaders() },
+      })
       if (me.user) {
         this.user = mapApiUser(me.user)
-        this.avatarStamp = Date.now() // bust cache
+        this.avatarStamp = Date.now()
         localStorage.setItem('user', JSON.stringify(this.user))
         localStorage.setItem('avatarStamp', String(this.avatarStamp))
       }

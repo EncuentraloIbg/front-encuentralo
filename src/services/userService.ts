@@ -1,4 +1,4 @@
-// src/services/userService.ts
+import { get, post, patch, del, upload } from './http'
 
 /* ===== Tipos ===== */
 
@@ -67,148 +67,78 @@ export type UsuarioMeUpdate = Partial<{
   avatar_url: string | null
 }>
 
-/* ===== Helpers ===== */
-
-function apiBase() {
-  const raw = (import.meta as any)?.env?.VITE_API_BASE_URL ?? 'http://localhost:3333'
-  return String(raw).replace(/\/$/, '')
-}
-
-function authHeader(): Record<string, string> {
-  const token = localStorage.getItem('token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
-async function parseJson<T>(res: Response): Promise<T | undefined> {
-  const text = await res.text()
-  if (!text) return undefined
-  try { return JSON.parse(text) as T } catch { return undefined }
-}
-
-async function ensureOk<T>(res: Response, fallbackMsg: string): Promise<T> {
-  if (!res.ok) {
-    const data = await parseJson<{ message?: string }>(res)
-    const msg = data?.message || `${fallbackMsg} (HTTP ${res.status})`
-    throw new Error(msg)
-  }
-  const data = await parseJson<T>(res)
-  return data as T
-}
-
 /* ===== Services ===== */
 
-/**
- * GET /api/v1/me
- * - Si no hay sesión (401) → retorna { user: null } sin lanzar error.
- * - En otros errores, lanza con mensaje del backend si existe.
- */
-export async function getMe(): Promise<{ user: Usuario | null }> {
-  const res = await fetch(`${apiBase()}/api/v1/me`, {
-    method: 'GET',
-    headers: { ...authHeader() },
-  })
-
-  if (res.status === 401) {
-    return { user: null }
-  }
-  return ensureOk<{ user: Usuario | null }>(res, 'Error al obtener usuario autenticado')
+/** GET /api/v1/me  */
+export function getMe(): Promise<{ user: Usuario | null }> {
+  return get<{ user: Usuario | null }>('/v1/me')
 }
 
 /** GET /api/v1/usuarios */
-export async function listarUsuarios(q: UsuariosQuery = {}): Promise<Paginated<Usuario>> {
-  const params = new URLSearchParams()
-  if (q.q) params.set('q', q.q)
-  if (q.estado) params.set('estado', q.estado)
-  if (q.razon_social_id !== undefined) params.set('razon_social_id', String(q.razon_social_id))
-  if (q.page) params.set('page', String(q.page))
-  if (q.perPage) params.set('perPage', String(q.perPage))
+export function listarUsuarios(q: UsuariosQuery = {}): Promise<Paginated<Usuario>> {
+  const params = {
+    q: q.q,
+    estado: q.estado,
+    razon_social_id: q.razon_social_id,
+    page: q.page,
+    perPage: q.perPage,
+  } satisfies Record<string, string | number | boolean | null | undefined>
 
-  const url = `${apiBase()}/api/v1/usuarios${params.toString() ? `?${params.toString()}` : ''}`
-  const res = await fetch(url, { method: 'GET', headers: { ...authHeader() } })
-  return ensureOk<Paginated<Usuario>>(res, 'Error al listar usuarios')
+  return get<Paginated<Usuario>>('/v1/usuarios', { params })
 }
 
 /** GET /api/v1/usuarios/:id */
-export async function obtenerUsuario(id: number): Promise<Usuario> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios/${id}`, {
-    method: 'GET',
-    headers: { ...authHeader() },
-  })
-  return ensureOk<Usuario>(res, 'Error al obtener usuario')
+export function obtenerUsuario(id: number): Promise<Usuario> {
+  return get<Usuario>(`/v1/usuarios/${id}`)
 }
 
 /** POST /api/v1/usuarios */
-export async function crearUsuario(payload: UsuarioCreate): Promise<Usuario> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify(payload),
-  })
-  return ensureOk<Usuario>(res, 'Error al crear usuario')
+export function crearUsuario(payload: UsuarioCreate): Promise<Usuario> {
+  return post<Usuario, UsuarioCreate>('/v1/usuarios', payload)
 }
 
 /** PATCH /api/v1/usuarios/:id */
-export async function actualizarUsuario(id: number, payload: UsuarioUpdate): Promise<Usuario> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify(payload),
-  })
-  return ensureOk<Usuario>(res, 'Error al actualizar usuario')
+export function actualizarUsuario(id: number, payload: UsuarioUpdate): Promise<Usuario> {
+  return patch<Usuario, UsuarioUpdate>(`/v1/usuarios/${id}`, payload)
 }
 
 /** PATCH /api/v1/usuarios/:id/activar */
-export async function activarUsuario(id: number): Promise<{ message: string; user: Usuario }> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios/${id}/activar`, {
-    method: 'PATCH',
-    headers: { ...authHeader() },
-  })
-  return ensureOk<{ message: string; user: Usuario }>(res, 'Error al activar usuario')
+export function activarUsuario(id: number): Promise<{ message: string; user: Usuario }> {
+  return patch<{ message: string; user: Usuario }>(`/v1/usuarios/${id}/activar`)
 }
 
 /** PATCH /api/v1/usuarios/:id/inactivar */
-export async function inactivarUsuario(id: number): Promise<{ message: string; user: Usuario }> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios/${id}/inactivar`, {
-    method: 'PATCH',
-    headers: { ...authHeader() },
-  })
-  return ensureOk<{ message: string; user: Usuario }>(res, 'Error al inactivar usuario')
+export function inactivarUsuario(id: number): Promise<{ message: string; user: Usuario }> {
+  return patch<{ message: string; user: Usuario }>(`/v1/usuarios/${id}/inactivar`)
 }
 
 /** DELETE /api/v1/usuarios/:id */
-export async function eliminarUsuario(id: number): Promise<{ message: string } | undefined> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios/${id}`, {
-    method: 'DELETE',
-    headers: { ...authHeader() },
-  })
-  if (res.status === 204) return undefined
-  return ensureOk<{ message: string }>(res, 'Error al eliminar usuario')
+export function eliminarUsuario(id: number): Promise<{ message: string } | undefined> {
+  return del<{ message: string } | undefined>(`/v1/usuarios/${id}`)
 }
 
-/** POST /api/v1/uploads/fotos — subir imagen y devolver URL (relativa o absoluta según back) */
+/** POST /api/v1/uploads/fotos — subir imagen y devolver URL */
 export async function uploadAvatar(file: File): Promise<string> {
   const fd = new FormData()
   fd.append('foto', file)
-  const res = await fetch(`${apiBase()}/api/v1/uploads/fotos`, {
-    method: 'POST',
-    headers: { ...authHeader() },
-    body: fd,
-  })
-  const data = await ensureOk<{ data: Array<{ url: string }> }>(res, 'Error al subir avatar')
-  const first = data?.data?.[0]
+  const res = await upload<{ data: Array<{ url: string }> }>('/v1/uploads/fotos', fd)
+  const first = res?.data?.[0]
   if (!first?.url) throw new Error('No se recibió URL del archivo subido')
   return first.url
 }
 
 /** PUT /api/v1/usuarios/me — actualizar MI perfil */
-export async function updateMyProfile(payload: UsuarioMeUpdate): Promise<{
+export function updateMyProfile(
+  payload: UsuarioMeUpdate
+): Promise<{
   message: string
   user: { id: number; nombres: string; apellidos: string; correo: string; avatar_url: string | null }
 }> {
-  const res = await fetch(`${apiBase()}/api/v1/usuarios/me`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...authHeader() },
-    body: JSON.stringify(payload),
-  })
-  return ensureOk(res, 'Error al actualizar mi perfil')
+  return post<
+    {
+      message: string
+      user: { id: number; nombres: string; apellidos: string; correo: string; avatar_url: string | null }
+    },
+    UsuarioMeUpdate
+  >('/v1/usuarios/me?_method=PUT', payload)
 }

@@ -5,7 +5,7 @@
         <!-- Logos -->
         <div class="brand">
           <img :src="logoEncuentralo" alt="Encuéntralo" class="logo e1 glow" />
-          <span class="amp">&</span>
+        <span class="amp">&</span>
           <img :src="logoMundoSmartphone" alt="MundoSmartphone" class="logo e2 glow" />
         </div>
 
@@ -48,13 +48,7 @@
           </div>
 
           <div class="meta">
-            <!-- 🔁 Antes: to="/forgot-password" -->
-          
-            <!-- Si prefieres por nombre de ruta:
-            <router-link :to="{ name: 'NewPassword', params: { token: 'preview' } }" class="link">
-              ¿Olvidó su contraseña?
-            </router-link>
-            -->
+            <!-- link de recuperar si lo necesitas -->
           </div>
 
           <button class="submit" type="submit" :disabled="loading">
@@ -70,6 +64,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { authSetStore } from '@/stores/AuthStore'
+import { ApiError } from '@/services/http' // ⬅️ para logs de error tipados
 import logoEncuentralo from '@/assets/Encuentralo.png'
 import logoMundoSmartphone from '@/assets/Mundosmartphone.png'
 
@@ -87,18 +82,42 @@ const handlerLogin = async () => {
     return
   }
   loading.value = true
+
+  // 🔎 LOGS **ANTES** de llamar al API
+  console.log('[LOGIN] BASE', import.meta.env?.VITE_API_BASE_URL) // debe ser tu túnel del backend
+  console.log('[LOGIN] FRONT URL', window.location.href)
+  console.log('[LOGIN] UA', navigator.userAgent)
+  console.log('[LOGIN] Payload preview', {
+    correo: email.value.trim().toLowerCase(),
+    passwordLen: password.value.trim().length,
+  })
+
   try {
-    // Normaliza por si acaso (el service también lo hace)
     const ok = await authStore.login({
       email: email.value.trim().toLowerCase(),
-      password: password.value,
+      password: password.value.trim(),
     })
+
+    // 🔎 LOGS **DESPUÉS** (OK o false)
+    console.log('[LOGIN] Result', ok)
+
     if (!ok) {
       errorMessage.value = 'No pudimos iniciar sesión. Revisa tus credenciales.'
     }
   } catch (e: unknown) {
-    const err = e as Error
-    errorMessage.value = err?.message || 'Ocurrió un error inesperado al iniciar sesión.'
+    // 🔎 LOGS **DESPUÉS** (ERROR)
+    if (e instanceof ApiError) {
+      console.error('[LOGIN] FAIL ApiError', {
+        status: e.status,
+        message: e.message,
+        url: e.url,
+      })
+      errorMessage.value = e.message || 'No pudimos iniciar sesión. Revisa tus credenciales.'
+    } else {
+      console.error('[LOGIN] FAIL Unknown', e)
+      const msg = (e as any)?.message || 'Ocurrió un error inesperado al iniciar sesión.'
+      errorMessage.value = msg
+    }
   } finally {
     loading.value = false
   }

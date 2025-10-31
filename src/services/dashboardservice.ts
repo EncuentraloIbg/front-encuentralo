@@ -1,14 +1,4 @@
-// src/services/dashboardOrdenesService.ts
-import { authSetStore } from '@/stores/AuthStore'
-
-const apiBaseFromEnv =
-  typeof import.meta !== 'undefined'
-    ? (import.meta.env?.VITE_API_BASE_URL as string | undefined)
-    : undefined
-
-// http://localhost:3333  -> añadimos /api/v1 nosotros
-const API_ORIGIN = (apiBaseFromEnv ? apiBaseFromEnv.replace(/\/$/, '') : 'http://localhost:3333')
-const API_BASE = `${API_ORIGIN}/api/v1`
+import { get } from './http'
 
 /** ===== Tipos que devuelve tu backend ===== */
 export interface DashboardMetricsApi {
@@ -52,7 +42,7 @@ export interface DashboardApiResponse {
 /** ===== Tipos que consume el front ===== */
 export interface MetricasUI {
   ordenesAbiertas: number
-  ordenesCerradasMes: number // cerradas últimos 30d (entregadas + canceladas + rechazadas)
+  ordenesCerradasMes: number
   ordenesHoy: number
 }
 
@@ -73,40 +63,20 @@ export default class DashboardOrdenesService {
     actividad: ActividadItemUI[]
     bruto: DashboardApiResponse
   }> {
-    const auth = authSetStore()
+    const json = await get<DashboardApiResponse>('/v1/dashboard')
 
-    // Intenta varias propiedades típicas para el token
-    const token =
-      (auth as any)?.token ||
-      (auth as any)?.accessToken ||
-      (auth as any)?.user?.token ||
-      localStorage.getItem('token')
-
-    const headers: HeadersInit = { 'Content-Type': 'application/json' }
-    if (token) headers.Authorization = `Bearer ${token}`
-
-    const res = await fetch(`${API_BASE}/dashboard`, { method: 'GET', headers })
-    if (!res.ok) {
-      const msg = await res.text()
-      throw new Error(`Dashboard ${res.status}: ${msg || 'Error al cargar'}`)
-    }
-
-    const json = (await res.json()) as DashboardApiResponse
-
-    // Adaptación a tarjetas:
     const m = json.metrics
     const metricas: MetricasUI = {
       ordenesAbiertas: m.pendientes,
-      ordenesCerradasMes: (m.entregadasUlt30 || 0) + (m.canceladasUlt30 || 0) + (m.rechazadasUlt30 || 0),
+      ordenesCerradasMes: (m.entregadasUlt30 ?? 0) + (m.canceladasUlt30 ?? 0) + (m.rechazadasUlt30 ?? 0),
       ordenesHoy: m.recibidasHoy,
     }
 
-    // Adaptación a lista de actividad:
-    const actividad: ActividadItemUI[] = (json.actividadReciente || []).map((h) => {
+    const actividad: ActividadItemUI[] = (json.actividadReciente ?? []).map((h) => {
       const code = h.orden?.codigo ?? `#${h.orden?.id ?? h.id}`
       const estado = (h.estado || h.orden?.estado || '').toUpperCase()
-      const cliente = h.orden?.cliente || 'Cliente'
-      const rs = h.orden?.razonSocial || '—'
+      const cliente = h.orden?.cliente ?? 'Cliente'
+      const rs = h.orden?.razonSocial ?? '—'
       return {
         id: h.orden?.id ?? h.id,
         titulo: code,
@@ -114,7 +84,7 @@ export default class DashboardOrdenesService {
         empresa: rs,
         asignadoA: cliente,
         evento: `Orden ${code} — ${estado}`,
-        fecha: h.createdAtRelative || (h.createdAt ?? '—'),
+        fecha: h.createdAtRelative || h.createdAt || '—',
       }
     })
 

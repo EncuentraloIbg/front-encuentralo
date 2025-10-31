@@ -6,7 +6,7 @@
         Detalle de Orden — <span class="ms-2 font-weight-medium">{{ orden.codigo }}</span>
         <v-spacer />
         <v-chip :color="estadoColor(orden.estado)" class="text-white" size="small">
-          {{ orden.estado.toUpperCase() }}
+          {{ (orden.estado || '').toUpperCase() }}
         </v-chip>
       </v-card-title>
 
@@ -19,16 +19,18 @@
           <!-- Razón social -->
           <v-col cols="12" md="6">
             <h4 class="text-subtitle-1 mb-1">Razón social</h4>
-            <div>{{ (orden.razonSocial as RS)?.nombre ?? '—' }}</div>
+            <div>{{ rsNombre }}</div>
           </v-col>
 
           <!-- Cliente -->
           <v-col cols="12" md="6">
             <h4 class="text-subtitle-1 mb-1">Cliente</h4>
-            <div class="mb-1">{{ (orden.cliente as Cli)?.nombre }} — Doc: {{ (orden.cliente as Cli)?.documento }}</div>
+            <div class="mb-1">
+              {{ cliNombre }}
+              <template v-if="cliDocumento"> — Doc: {{ cliDocumento }}</template>
+            </div>
             <div class="text-grey">
-              Tel: {{ (orden.cliente as Cli)?.telefono || '—' }} ·
-              Correo: {{ (orden.cliente as Cli)?.correo || '—' }}
+              Tel: {{ cliTelefono || '—' }} · Correo: {{ cliCorreo || '—' }}
             </div>
           </v-col>
 
@@ -36,25 +38,26 @@
           <v-col cols="12" md="6" class="mt-4">
             <h4 class="text-subtitle-1 mb-1">Equipo</h4>
             <div>
-              {{ (orden.equipo as Eq)?.marca }} {{ (orden.equipo as Eq)?.modelo }}
-              · IMEI/SN: <strong>{{ (orden.equipo as Eq)?.serieImei }}</strong>
+              {{ equipoMarca }} {{ equipoModelo }} · IMEI/SN: <strong>{{ equipoSerie }}</strong>
             </div>
-            <div class="text-grey">Tipo: {{ tipoEquipoNombre }} · Specs: {{ (orden.equipo as Eq)?.specs || '—' }}</div>
+            <div class="text-grey">
+              Tipo: {{ tipoEquipoNombre }} · Specs: {{ equipoSpecs || '—' }}
+            </div>
           </v-col>
 
           <!-- Pago / valores -->
           <v-col cols="12" md="6" class="mt-4">
             <h4 class="text-subtitle-1 mb-1">Valores / Pago</h4>
-            <div>Método de pago: {{ (orden.metodoPago as MP)?.nombre || '—' }}</div>
+            <div>Método de pago: {{ metodoPagoNombre || '—' }}</div>
             <div>Diagnóstico: {{ money(orden.diagnostico_costo) }}</div>
             <div>Anticipo: {{ money(orden.anticipo) }}</div>
-            <div>Entrega acordada: {{ fmt(orden.fecha_entrega_acordada as string | undefined) }}</div>
+            <div>Entrega acordada: {{ fmt(orden.fecha_entrega_acordada || undefined) }}</div>
           </v-col>
 
           <!-- Condiciones/flags -->
           <v-col cols="12" class="mt-4">
             <h4 class="text-subtitle-1 mb-2">Condiciones / Flags</h4>
-            <div class="d-flex flex-wrap ga-2">
+            <div class="d-flex flex-wrap gap-2">
               <v-chip variant="tonal" :color="orden.autoriza_respaldo ? 'green' : 'grey'">
                 Autoriza respaldo: {{ boolTxt(orden.autoriza_respaldo) }}
               </v-chip>
@@ -84,15 +87,15 @@
           <!-- Accesorios -->
           <v-col cols="12" class="mt-4">
             <h4 class="text-subtitle-1 mb-2">Accesorios</h4>
-            <div v-if="(orden.accesorios as AccIn[])?.length">
+            <div v-if="accesoriosList.length">
               <v-chip
-                v-for="(a, i) in (orden.accesorios as AccIn[])"
+                v-for="(a, i) in accesoriosList"
                 :key="i"
                 class="ma-1"
                 variant="tonal"
                 color="primary"
               >
-                #{{ a.accesorio_id }} {{ a.detalle ? `· ${a.detalle}` : '' }}
+                #{{ a.accesorio_id }}<span v-if="a.detalle"> · {{ a.detalle }}</span>
               </v-chip>
             </div>
             <div v-else class="text-grey">Sin accesorios</div>
@@ -101,9 +104,9 @@
           <!-- Fotos -->
           <v-col cols="12" class="mt-2">
             <h4 class="text-subtitle-1 mb-2">Fotos</h4>
-            <div v-if="(orden.fotos as Foto[])?.length" class="d-flex flex-wrap ga-3">
+            <div v-if="fotosList.length" class="d-flex flex-wrap gap-3">
               <v-img
-                v-for="(f, i) in (orden.fotos as Foto[])"
+                v-for="(f, i) in fotosList"
                 :key="i"
                 :src="f.url"
                 width="140"
@@ -118,9 +121,9 @@
           <!-- Archivos -->
           <v-col cols="12" class="mt-2">
             <h4 class="text-subtitle-1 mb-2">Archivos</h4>
-            <div v-if="(orden.archivos as Arch[])?.length" class="d-flex flex-column">
+            <div v-if="archivosList.length" class="d-flex flex-column">
               <v-btn
-                v-for="(a, i) in (orden.archivos as Arch[])"
+                v-for="(a, i) in archivosList"
                 :key="i"
                 variant="tonal"
                 color="primary"
@@ -128,7 +131,7 @@
                 prepend-icon="mdi-download"
                 @click="abrirUrl(a.url)"
               >
-                {{ a.nombre_archivo }} — ({{ a.tipo }})
+                {{ a.nombre_archivo }} — ({{ a.tipo || 'archivo' }})
               </v-btn>
             </div>
             <div v-else class="text-grey">Sin archivos</div>
@@ -138,7 +141,15 @@
         <!-- TRAZABILIDAD -->
         <v-divider class="my-6" />
         <h4 class="text-subtitle-1 mb-3">Trazabilidad</h4>
-        <div style="max-height: 280px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px;">
+        <div
+          style="
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+          "
+        >
           <v-timeline density="compact">
             <v-timeline-item
               v-for="(h, idx) in historial"
@@ -147,11 +158,11 @@
               size="small"
             >
               <div class="mb-1">
-                <strong>Estado:</strong> {{ h.estado.toUpperCase() }}
+                <strong>Estado:</strong> {{ (h.estado || '').toUpperCase() }}
                 <span v-if="h.motivoTexto" class="text-grey"> — {{ h.motivoTexto }}</span>
               </div>
               <div class="text-grey">
-                <span v-if="h.usuarioId">Usuario ID: {{ h.usuarioId }}</span>
+                <span v-if="h.usuarioId !== null">Usuario ID: {{ h.usuarioId }}</span>
                 <span class="ms-2">{{ fmt(h.created_at) }}</span>
               </div>
             </v-timeline-item>
@@ -160,12 +171,12 @@
 
         <!-- ACCIONES -->
         <v-row class="mt-6" align="center">
-          <v-col cols="12" md="6" class="d-flex ga-2">
+          <v-col cols="12" md="6" class="d-flex gap-2">
             <v-btn color="primary" variant="tonal" prepend-icon="mdi-arrow-left" @click="volver">
               Volver
             </v-btn>
           </v-col>
-          <v-col cols="12" md="6" class="d-flex justify-end ga-2">
+          <v-col cols="12" md="6" class="d-flex justify-end gap-2">
             <v-btn color="success" @click="abrirCerrar('entregado')" :disabled="orden.estado !== 'recibido'">
               Marcar entregado
             </v-btn>
@@ -185,13 +196,7 @@
       <v-card>
         <v-card-title class="headline">Cerrar orden ({{ estadoCierre?.toUpperCase() }})</v-card-title>
         <v-card-text>
-          <v-text-field
-            type="date"
-            label="Fecha de cierre"
-            v-model="fechaCierre"
-            :max="hoyIso"
-            required
-          />
+          <v-text-field type="date" label="Fecha de cierre" v-model="fechaCierre" :max="hoyIso" required />
           <v-select
             v-if="estadoCierre === 'cancelada' || estadoCierre === 'rechazada'"
             label="Motivo (opcional si usas texto)"
@@ -238,27 +243,18 @@ import {
   type FotoIn as Foto,
   type ArchivoIn as Arch,
   type AccesorioIn as AccIn,
-} from '@/services/ordenesService'
-
-type RS = { id: number; nombre: string }
-type Cli = { id: number; nombre: string; documento: string; telefono?: string; correo?: string }
-type Eq = { id: number; tipoEquipoId: number; marca: string; modelo: string; serieImei: string; specs?: string | null }
-type MP = { id: number; nombre: string }
+  type HistorialItem,
+} from '@/services/OrdenesService'
 
 const route = useRoute()
 const router = useRouter()
 
+// ======= State principal =======
 const orden = ref<OrdenDetalle | null>(null)
-const historial = ref<Array<{
-  estado: OrdenEstado
-  usuarioId: number | null
-  motivoTexto?: string | null
-  created_at?: string
-}>>([])
-
+const historial = ref<HistorialItem[]>([])
 const motivos = ref<MotivoEstado[]>([])
 
-// Cerrar orden dialog
+// ======= Dialog de cierre =======
 const dlgCerrar = ref(false)
 const estadoCierre = ref<Extract<OrdenEstado, 'entregado' | 'cancelada' | 'rechazada'> | null>(null)
 const fechaCierre = ref<string>(DateTime.now().toISODate() || '')
@@ -273,25 +269,48 @@ const snack = ref<{ open: boolean; msg: string; color: 'success' | 'error' | 'wa
 
 const hoyIso = computed(() => DateTime.now().toISODate() || '')
 
+// ======= Derivados seguros (evitan casts en template) =======
+const rsNombre = computed(() => orden.value?.razonSocial?.nombre ?? '—')
+
+const cliNombre = computed(() => orden.value?.cliente?.nombre ?? '—')
+const cliDocumento = computed(() => orden.value?.cliente?.documento ?? '')
+const cliTelefono = computed(() => orden.value?.cliente?.telefono ?? '')
+const cliCorreo = computed(() => orden.value?.cliente?.correo ?? '')
+
+const equipoMarca = computed(() => orden.value?.equipo?.marca ?? '—')
+const equipoModelo = computed(() => orden.value?.equipo?.modelo ?? '')
+const equipoSerie = computed(() => orden.value?.equipo?.serieImei ?? '—')
+const equipoSpecs = computed(() => orden.value?.equipo?.specs ?? '')
+
+const metodoPagoNombre = computed(() => orden.value?.metodoPago?.nombre ?? '')
+
 const tipoEquipoNombre = computed(() => {
-  // Si precargas el tipo en el detalle, aquí podrías resolver el nombre real;
-  // por ahora mostramos el ID (o usa otro service si lo necesitas).
-  return (orden.value?.equipo as Eq | undefined)?.tipoEquipoId
-    ? `#${(orden.value!.equipo as Eq).tipoEquipoId}`
-    : '—'
+  const id = orden.value?.equipo?.tipoEquipoId
+  return id ? `#${id}` : '—'
 })
 
+const accesoriosList = computed<AccIn[]>(() => (orden.value?.accesorios ?? []).filter(Boolean))
+const fotosList = computed<Foto[]>(() => (orden.value?.fotos ?? []).filter(Boolean))
+const archivosList = computed<Arch[]>(() => (orden.value?.archivos ?? []).filter(Boolean))
+
+// ======= Utilidades =======
 function abrirUrl(url: string) {
+  if (!url) return
   window.open(url, '_blank', 'noopener')
 }
 
-function estadoColor(e: OrdenEstado): string {
+function estadoColor(e?: OrdenEstado): string {
   switch (e) {
-    case 'recibido': return 'blue'
-    case 'entregado': return 'green'
-    case 'cancelada': return 'orange'
-    case 'rechazada': return 'red'
-    default: return 'grey'
+    case 'recibido':
+      return 'blue'
+    case 'entregado':
+      return 'green'
+    case 'cancelada':
+      return 'orange'
+    case 'rechazada':
+      return 'red'
+    default:
+      return 'grey'
   }
 }
 
@@ -309,7 +328,11 @@ function fmt(iso?: string): string {
 
 function money(v?: number | null): string {
   if (v === null || v === undefined) return '—'
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v)
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(v)
 }
 
 function volver() {
@@ -318,7 +341,7 @@ function volver() {
 
 const motivosAplicables = computed(() => {
   if (!estadoCierre.value) return []
-  return motivos.value.filter(m => m.estado_aplicable === estadoCierre.value)
+  return motivos.value.filter((m) => m.estado_aplicable === estadoCierre.value)
 })
 
 function abrirCerrar(e: Extract<OrdenEstado, 'entregado' | 'cancelada' | 'rechazada'>) {
@@ -334,16 +357,22 @@ async function confirmarCerrar() {
   try {
     const payload = {
       estado: estadoCierre.value,
-      fecha_cierre: DateTime.fromISO(fechaCierre.value).toISO()!,
-      motivo_estado_id: (estadoCierre.value === 'cancelada' || estadoCierre.value === 'rechazada') ? (motivoId.value ?? null) : null,
-      motivo_estado_texto: (estadoCierre.value === 'cancelada' || estadoCierre.value === 'rechazada') ? (motivoTexto.value || null) : null,
+      fecha_cierre: DateTime.fromISO(fechaCierre.value || DateTime.now().toISODate() || '').toISO()!,
+      motivo_estado_id:
+        estadoCierre.value === 'cancelada' || estadoCierre.value === 'rechazada'
+          ? motivoId.value ?? null
+          : null,
+      motivo_estado_texto:
+        estadoCierre.value === 'cancelada' || estadoCierre.value === 'rechazada'
+          ? motivoTexto.value || null
+          : null,
     }
     await cerrarOrden(orden.value.id, payload)
     snack.value = { open: true, msg: 'Orden cerrada correctamente', color: 'success' }
     dlgCerrar.value = false
     await cargar()
   } catch (e) {
-    console.error(e)
+    console.error('[cerrarOrden] error:', e)
     snack.value = { open: true, msg: 'No fue posible cerrar la orden', color: 'error' }
   }
 }
@@ -353,27 +382,29 @@ async function cargar() {
   const det = await obtenerOrden(id)
   orden.value = det
 
-  // Historial viene en preload
-  const hist = (det.historial ?? []) as Array<{
-    estado: OrdenEstado
-    usuarioId: number | null
-    motivoTexto?: string | null
-    created_at?: string
-  }>
-  historial.value = hist
+  const hist = Array.isArray(det.historial) ? det.historial : []
+  historial.value = hist.map((h, idx) => ({
+    id: h.id ?? idx, // usa el id real; si no viene, fallback al índice
+    estado: h.estado,
+    usuarioId: h.usuarioId ?? null,
+    motivoEstadoId: h.motivoEstadoId ?? undefined,
+    motivoTexto: h.motivoTexto ?? null,
+    created_at: h.created_at ?? undefined,
+  }))
 
-  // Motivos de estado (para cerrar cancelada/rechazada)
   motivos.value = await obtenerMotivosEstado()
 }
 
 onMounted(() => {
-  cargar().catch(err => {
-    console.error('Error cargando orden:', err)
+  cargar().catch((err) => {
+    console.error('[obtenerOrden] error:', err)
     snack.value = { open: true, msg: 'No fue posible cargar la orden', color: 'error' }
   })
 })
 </script>
 
 <style scoped>
-.v-card-title { align-items: center; }
+.v-card-title {
+  align-items: center;
+}
 </style>

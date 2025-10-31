@@ -1,4 +1,6 @@
+// src/composables/useDashboardOrdenes.ts
 import { ref } from 'vue'
+import { get, ApiError } from '@/services/http'
 
 type OrdenEstado = 'recibido' | 'entregado' | 'cancelada' | 'rechazada'
 
@@ -40,20 +42,6 @@ export type ActividadItem = {
   color?: string
 }
 
-const API_BASE =
-  (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:3333'
-
-function ensureJsonResponse(res: Response) {
-  const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('application/json')) throw new Error(`Respuesta no JSON (status ${res.status})`)
-}
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`)
-  ensureJsonResponse(res)
-  return (await res.json()) as T
-}
-
 const coalesceDate = (o: { createdAt?: string; created_at?: string }) => o.createdAt || o.created_at
 
 const isToday = (iso?: string) => {
@@ -73,9 +61,15 @@ const isWithinLastDays = (iso?: string, days = 30) => {
   return diff >= 0 && diff <= days * 24 * 60 * 60 * 1000
 }
 
-/* 👇 Antes devolvía info/success/warning/error (azules/verdes/etc.).
-   Lo llevamos a gris para un look neutro consistente. */
-const estadoColor = (_e: OrdenEstado) => 'grey-darken-2'
+/* Look & feel neutro (gris) */
+/* Look & feel neutro (gris) */
+const ESTADO_COLOR: Record<OrdenEstado, string> = {
+  recibido: 'grey-darken-2',
+  entregado: 'grey-darken-2',
+  cancelada: 'grey-darken-2',
+  rechazada: 'grey-darken-2',
+}
+const estadoColor = (e: OrdenEstado): string => ESTADO_COLOR[e]
 
 const stripPrefix = (code: string) => code.replace(/^[A-Z]+-/, '') // quita "OEC-", "OGC-", etc.
 
@@ -94,17 +88,17 @@ export function useDashboardOrdenes() {
     cargando.value = true
     error.value = null
     try {
-      // ====== 1) Últimas órdenes ======
-      const ordUrl = `${API_BASE}/api/v1/ordenes?page=1&perPage=50`
-      const ordResp = await fetchJson<Paginated<OrdenResumen>>(ordUrl)
-      const ordenes = ordResp.data || []
+      // 1) Últimas órdenes (para abiertas/cerradas últimos 30 días + actividad)
+      const ordResp = await get<Paginated<OrdenResumen>>('/v1/ordenes', {
+        params: { page: 1, perPage: 50 },
+      })
+      const ordenes = ordResp.data ?? []
 
       const abiertas = ordenes.filter((o) => o.estado === 'recibido').length
       const cerradasMes = ordenes.filter((o) => {
         const f = coalesceDate(o)
-        return (o.estado !== 'recibido') && isWithinLastDays(f, 30)
+        return o.estado !== 'recibido' && isWithinLastDays(f, 30)
       }).length
-      const hoyAbiertasAprox = ordenes.filter((o) => o.estado === 'recibido' && isToday(coalesceDate(o))).length
 
       actividadReciente.value = ordenes.slice(0, 10).map((o) => {
         const fecha = coalesceDate(o)
@@ -121,24 +115,27 @@ export function useDashboardOrdenes() {
         }
       })
 
-      // ====== 2) Historial (para “hoy”) ======
-      const histUrl = `${API_BASE}/api/v1/ordenes/historial?page=1&perPage=100`
-      const histResp = await fetchJson<HistPaginated>(histUrl)
-      const hist = histResp.data || []
+      // 2) Historial del día (para hoy abiertas/cerradas)
+      const histResp = await get<HistPaginated>('/v1/ordenes/historial', {
+        params: { page: 1, perPage: 100 },
+      })
+      const hist = histResp.data ?? []
 
       const abiertasHoy = hist.filter((h) => h.estado === 'recibido' && isToday(coalesceDate(h))).length
       const cerradasHoy = hist.filter(
-        (h) => (h.estado === 'entregado' || h.estado === 'cancelada' || h.estado === 'rechazada') && isToday(coalesceDate(h))
+        (h) =>
+          (h.estado === 'entregado' || h.estado === 'cancelada' || h.estado === 'rechazada') &&
+          isToday(coalesceDate(h))
       ).length
 
       metricas.value = {
         ordenesAbiertas: abiertas,
         ordenesCerradasMes: cerradasMes,
-        ordenesHoyAbiertas: abiertasHoy || hoyAbiertasAprox,
+        ordenesHoyAbiertas: abiertasHoy,
         ordenesHoyCerradas: cerradasHoy,
       }
-    } catch (e: any) {
-      error.value = e?.message || 'Error desconocido'
+    } catch (e) {
+      error.value = e instanceof ApiError ? e.message : (e as Error).message
     } finally {
       cargando.value = false
     }

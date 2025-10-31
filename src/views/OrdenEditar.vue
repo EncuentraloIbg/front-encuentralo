@@ -38,13 +38,7 @@
       <v-divider />
 
       <v-card-text>
-        <v-alert
-          v-if="error"
-          type="error"
-          variant="tonal"
-          class="mb-4"
-          :text="error"
-        />
+        <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
 
         <div v-if="loading" class="py-8 d-flex justify-center">
           <v-progress-circular indeterminate size="36" />
@@ -53,7 +47,9 @@
         <v-form v-else @submit.prevent="onSubmit" class="form" style="color: black">
           <!-- ===== CLIENTE ===== -->
           <v-row class="mb-1">
-            <v-col cols="12"><h3 class="text-subtitle-1 font-weight-bold">DATOS DEL CLIENTE</h3></v-col>
+            <v-col cols="12">
+              <h3 class="text-subtitle-1 font-weight-bold">DATOS DEL CLIENTE</h3>
+            </v-col>
 
             <v-col cols="12" md="3">
               <v-radio-group v-model="cliente.tipo_cliente" inline :disabled="!EDITAR_CLIENTE_EQUIPO">
@@ -131,7 +127,9 @@
 
           <!-- ===== EQUIPO ===== -->
           <v-row>
-            <v-col cols="12"><h3 class="text-subtitle-1 font-weight-bold">DATOS DEL EQUIPO</h3></v-col>
+            <v-col cols="12">
+              <h3 class="text-subtitle-1 font-weight-bold">DATOS DEL EQUIPO</h3>
+            </v-col>
 
             <v-col cols="12" md="4">
               <v-select
@@ -350,19 +348,8 @@
 
             <v-col cols="12">
               <div class="d-flex flex-wrap">
-                <v-card
-                  v-for="(f, idx) in fotos"
-                  :key="idx"
-                  class="ma-2"
-                  elevation="1"
-                  width="180"
-                >
-                  <v-img
-                    :src="f.preview || f.url"
-                    height="120"
-                    cover
-                    class="bg-grey-lighten-3"
-                  >
+                <v-card v-for="(f, idx) in fotos" :key="idx" class="ma-2" elevation="1" width="180">
+                  <v-img :src="f.preview || f.url" height="120" cover class="bg-grey-lighten-3">
                     <template #placeholder>
                       <div class="fill-height d-flex align-center justify-center text-medium-emphasis">
                         <v-progress-circular v-if="f.uploading" indeterminate size="20" class="me-2" />
@@ -374,7 +361,7 @@
 
                   <v-card-text class="py-2">
                     <div class="text-caption">
-                      {{ f.descripcion || (f.file?.name || 'Imagen') }}
+                      {{ f.descripcion || f.file?.name || 'Imagen' }}
                     </div>
                     <div v-if="f.error" class="text-caption text-error">Error: {{ f.error }}</div>
                   </v-card-text>
@@ -387,25 +374,18 @@
                       :disabled="!f.preview && !f.url"
                       @click="abrirPreview(f)"
                     >
-                      <v-icon class="me-1">mdi-magnify</v-icon> Ver
+                      <v-icon class="me-1">mdi-magnify</v-icon>
+                      Ver
                     </v-btn>
                     <v-spacer />
-                    <v-btn
-                      size="small"
-                      variant="text"
-                      color="error"
-                      :disabled="f.uploading"
-                      @click="eliminarFoto(idx)"
-                    >
+                    <v-btn size="small" variant="text" color="error" :disabled="f.uploading" @click="eliminarFoto(idx)">
                       <v-icon>mdi-close</v-icon>
                     </v-btn>
                   </v-card-actions>
                 </v-card>
               </div>
 
-              <div v-if="fotos.length === 0" class="text-medium-emphasis">
-                Aún no has añadido fotos.
-              </div>
+              <div v-if="fotos.length === 0" class="text-medium-emphasis">Aún no has añadido fotos.</div>
             </v-col>
           </v-row>
 
@@ -421,12 +401,7 @@
               </v-card-title>
               <v-divider />
               <v-card-text class="d-flex justify-center">
-                <v-img
-                  :src="previewSrc"
-                  max-height="70vh"
-                  contain
-                  class="bg-grey-lighten-3 rounded-lg"
-                />
+                <v-img :src="previewSrc" max-height="70vh" contain class="bg-grey-lighten-3 rounded-lg" />
               </v-card-text>
             </v-card>
           </v-dialog>
@@ -462,16 +437,18 @@
 
           <!-- ===== CONDICIONES ===== -->
           <v-row>
-            <v-col cols="12"><h3 class="text-subtitle-1 font-weight-bold">CONDICIONES</h3></v-col>
+            <v-col cols="12">
+              <h3 class="text-subtitle-1 font-weight-bold">CONDICIONES</h3>
+            </v-col>
 
             <v-col cols="12" md="4">
-              <v-checkbox v-model="orden.autoriza_respaldo" label="¿Autoriza respaldo de datos?" hide-details/>
+              <v-checkbox v-model="orden.autoriza_respaldo" label="¿Autoriza respaldo de datos?" hide-details />
             </v-col>
             <v-col cols="12" md="4">
-              <v-checkbox v-model="orden.autoriza_apertura" label="¿Autoriza apertura del equipo?" hide-details/>
+              <v-checkbox v-model="orden.autoriza_apertura" label="¿Autoriza apertura del equipo?" hide-details />
             </v-col>
             <v-col cols="12" md="4">
-              <v-checkbox v-model="orden.mojado" label="¿Equipo con humedad/derrame?" hide-details/>
+              <v-checkbox v-model="orden.mojado" label="¿Equipo con humedad/derrame?" hide-details />
             </v-col>
 
             <v-col cols="12">
@@ -489,7 +466,9 @@
 
           <!-- ===== VALORES ===== -->
           <v-row>
-            <v-col cols="12"><h3 class="text-subtitle-1 font-weight-bold">VALORES</h3></v-col>
+            <v-col cols="12">
+              <h3 class="text-subtitle-1 font-weight-bold">VALORES</h3>
+            </v-col>
 
             <v-col cols="12" md="3">
               <v-text-field
@@ -547,13 +526,18 @@
               <v-checkbox v-model="confirmDatos" label="Confirmo que los datos fueron revisados" hide-details />
             </v-col>
             <v-col cols="12" md="6">
-              <v-checkbox v-model="confirmAccesorios" label="Confirmo que se recibieron únicamente los accesorios listados" hide-details />
+              <v-checkbox
+                v-model="confirmAccesorios"
+                label="Confirmo que se recibieron únicamente los accesorios listados"
+                hide-details
+              />
             </v-col>
           </v-row>
 
           <div class="d-flex flex-wrap gap-2 mt-4">
             <v-btn variant="text" color="grey" @click="goBack">
-              <v-icon class="me-1">mdi-arrow-left</v-icon> Volver
+              <v-icon class="me-1">mdi-arrow-left</v-icon>
+              Volver
             </v-btn>
             <v-spacer />
             <v-btn color="grey" variant="text" @click="resetForm">Restablecer</v-btn>
@@ -575,19 +559,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  reqObtenerOrden,
-  reqActualizarOrden,
-  reqAccesorios,
-  reqMetodosPago,
-  reqTiposEquipo,
-  reqAgregarFotos,
-  reqAgregarAccesorios,
-} from '@/services/ordenesService'
+import { get, patch, post, upload, ApiError } from '@/services/http'
 
 /* ===== Flags (ajusta a tu backend) ===== */
 const EDITAR_CLIENTE_EQUIPO = false
-const EDITAR_RAZON_SOCIAL   = false
+const EDITAR_RAZON_SOCIAL = false
 
 /* ===== Router ===== */
 const route = useRoute()
@@ -603,11 +579,13 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref<string | null>(null)
 type SnackColor = 'success' | 'error' | 'warning'
-const snackbar = ref<{ show: boolean; message: string; color: SnackColor }>({ show: false, message: '', color: 'success' })
+const snackbar = ref<{ show: boolean; message: string; color: SnackColor }>({
+  show: false,
+  message: '',
+  color: 'success',
+})
 
-/* ===== API ORIGIN (para subir fotos) ===== */
-const apiBaseFromEnv = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL as string | undefined) : undefined
-const API_ORIGIN = (apiBaseFromEnv ? apiBaseFromEnv.replace(/\/$/, '') : 'http://localhost:3333')
+/* ===== API ORIGIN (para URLs absolutas de imágenes existentes) ===== */
 
 /* ===== Tipos ===== */
 type Catalogo = { id: number; nombre: string; logo?: string; prefijo?: string; logoWidth?: number }
@@ -645,35 +623,114 @@ type OrdenPayload = {
   fecha_entrega_acordada?: string | null
 }
 
+type OrdenDetalleDTO = {
+  id: number
+  codigo: string
+  razon_social?: { id: number; nombre: string } | null
+  razonSocial?: { id: number; nombre: string } | null
+  cliente?: {
+    id: number
+    nombre: string
+    documento?: string
+    telefono?: string
+    correo?: string
+    direccion?: string
+    whatsapp_opt_in?: boolean
+    tipo_cliente?: 'persona' | 'empresa' | null
+  } | null
+  equipo?: {
+    id: number
+    tipo_equipo_id?: number
+    tipoEquipoId?: number
+    marca?: string
+    modelo?: string
+    serie_imei?: string
+    serieImei?: string
+    specs?: string
+  } | null
+  fecha_entrega_acordada?: string | null
+  fechaEntregaAcordada?: string | null
+  estado_estetico?: string | null
+  estadoEstetico?: string | null
+  fallo_reportado?: string | null
+  falloReportado?: string | null
+  observaciones_cliente?: string | null
+  observacionesCliente?: string | null
+  pass_desbloqueo?: string | null
+  passDesbloqueo?: string | null
+  autoriza_respaldo?: boolean | null
+  autorizaRespaldo?: boolean | null
+  autoriza_apertura?: boolean | null
+  autorizaApertura?: boolean | null
+  mojado?: boolean | null
+  diagnostico_costo?: number | null
+  diagnosticoCosto?: number | null
+  anticipo?: number | null
+  metodo_pago?: { id: number; nombre: string } | null
+  metodoPago?: { id: number; nombre: string } | null
+  accesorios?: Array<{ id: number; accesorio_id?: number; nombre?: string; detalle?: string }>
+  fotos?: Array<{ id: number; url: string; descripcion?: string }>
+}
+
 /* ===== Form state ===== */
 const razon_social_id = ref<number>(0)
 const ordenCodigo = ref<string>('')
 
 const cliente = ref<ClientePayload>({
-  nombre: '', documento: '', telefono: '', correo: '', direccion: '', whatsapp_opt_in: false, tipo_cliente: 'persona',
+  nombre: '',
+  documento: '',
+  telefono: '',
+  correo: '',
+  direccion: '',
+  whatsapp_opt_in: false,
+  tipo_cliente: 'persona',
 })
 const equipo = ref<EquipoPayload>({
-  tipo_equipo_id: null, marca: '', modelo: '', serie_imei: '', specs: '',
+  tipo_equipo_id: null,
+  marca: '',
+  modelo: '',
+  serie_imei: '',
+  specs: '',
 })
 const orden = ref<OrdenPayload>({
-  estado_estetico: '', fallo_reportado: '', observaciones_cliente: '', pass_desbloqueo: '',
-  autoriza_respaldo: false, autoriza_apertura: false, mojado: false,
-  diagnostico_costo: null, anticipo: null, metodo_pago_id: null, fecha_entrega_acordada: null,
+  estado_estetico: '',
+  fallo_reportado: '',
+  observaciones_cliente: '',
+  pass_desbloqueo: '',
+  autoriza_respaldo: false,
+  autoriza_apertura: false,
+  mojado: false,
+  diagnostico_costo: null,
+  anticipo: null,
+  metodo_pago_id: null,
+  fecha_entrega_acordada: null,
 })
 
 /* ===== Razones sociales (demo logos) ===== */
 import logoEncuentralo from '@/assets/Encuentralo.png?url'
 import logoMundosmartphone from '@/assets/Mundosmartphone.png?url'
 const razonesSociales = ref<Catalogo[]>([
-  { id: 1, nombre: 'Encuentralo.com',  logo: logoEncuentralo,     prefijo: 'OEC', logoWidth: 160 },
-  { id: 2, nombre: 'Mundosmartphone',  logo: logoMundosmartphone,  prefijo: 'OGC', logoWidth: 320 },
+  { id: 1, nombre: 'Encuentralo.com', logo: logoEncuentralo, prefijo: 'OEC', logoWidth: 160 },
+  { id: 2, nombre: 'Mundosmartphone', logo: logoMundosmartphone, prefijo: 'OGC', logoWidth: 320 },
 ])
-const razonSocialNombre = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.nombre ?? 'Razón social')
-const razonSocialLogo = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.logo ?? null)
-const razonSocialLogoWidth = computed(() => razonesSociales.value.find(r => r.id === razon_social_id.value)?.logoWidth ?? 160)
+const razonSocialNombre = computed(
+  () => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.nombre ?? 'Razón social'
+)
+const razonSocialLogo = computed(() => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.logo ?? null)
+const razonSocialLogoWidth = computed(
+  () => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.logoWidth ?? 160
+)
 
 /* ===== Validación ===== */
-const errors = ref<Record<string, string>>({ nombre: '', documento: '', tipo_equipo_id: '', marca: '', modelo: '', serie_imei: '', fallo_reportado: '' })
+const errors = ref<Record<string, string>>({
+  nombre: '',
+  documento: '',
+  tipo_equipo_id: '',
+  marca: '',
+  modelo: '',
+  serie_imei: '',
+  fallo_reportado: '',
+})
 function validate() {
   errors.value = {
     nombre: cliente.value.nombre?.trim() ? '' : 'Nombre es obligatorio.',
@@ -693,46 +750,95 @@ const accesorios = ref<AccesorioItem[]>([])
 const metodosPago = ref<MetodoPagoItem[]>([])
 async function cargarCatalogos() {
   const [tip, acc, mp] = await Promise.all([
-    (async () => { const { method, url } = reqTiposEquipo(); const r = await fetch(url, { method }); return r.ok ? r.json() : [] })(),
-    (async () => { const { method, url } = reqAccesorios(); const r = await fetch(url, { method }); return r.ok ? r.json() : [] })(),
-    (async () => { const { method, url } = reqMetodosPago(); const r = await fetch(url, { method }); return r.ok ? r.json() : [] })(),
+    get<TipoEquipoItem[]>('/v1/catalogos/tipos-equipo'),
+    get<AccesorioItem[]>('/v1/catalogos/accesorios'),
+    get<MetodoPagoItem[]>('/v1/catalogos/metodos-pago'),
   ])
-  tiposEquipo.value = tip || []
-  accesorios.value = acc || []
-  metodosPago.value = mp || []
+  tiposEquipo.value = tip ?? []
+  accesorios.value = acc ?? []
+  metodosPago.value = mp ?? []
 }
 
 /* ===== Marcas dinámicas ===== */
-const PC_BRANDS = ['Acer','ASUS','Dell','HP','Lenovo','MSI','Apple','Samsung','Toshiba','Huawei','Razer','Microsoft (Surface)','Alienware','Gigabyte','Sony','LG'] as const
-const PHONE_BRANDS = ['Samsung','Apple (iPhone)','Xiaomi','Huawei','Motorola','Nokia','OPPO','Vivo','OnePlus','Sony','ZTE','Realme','Google (Pixel)','Honor','Tecno','Infinix','LG','ASUS (ROG)','Lenovo'] as const
-const OTHER_OPTION = 'Otro'
+const PC_BRANDS = [
+  'Acer',
+  'ASUS',
+  'Dell',
+  'HP',
+  'Lenovo',
+  'MSI',
+  'Apple',
+  'Samsung',
+  'Toshiba',
+  'Huawei',
+  'Razer',
+  'Microsoft (Surface)',
+  'Alienware',
+  'Gigabyte',
+  'Sony',
+  'LG',
+] as const
+const PHONE_BRANDS = [
+  'Samsung',
+  'Apple (iPhone)',
+  'Xiaomi',
+  'Huawei',
+  'Motorola',
+  'Nokia',
+  'OPPO',
+  'Vivo',
+  'OnePlus',
+  'Sony',
+  'ZTE',
+  'Realme',
+  'Google (Pixel)',
+  'Honor',
+  'Tecno',
+  'Infinix',
+  'LG',
+  'ASUS (ROG)',
+  'Lenovo',
+] as const
+const OTHER_OPTION = 'Otro' as const
 const brandSelected = ref<string | null>(null)
 const brandOther = ref('')
 
-const selectedTipo = computed(() => tiposEquipo.value.find(t => t.id === (equipo.value.tipo_equipo_id ?? -1)))
+const selectedTipo = computed(() => tiposEquipo.value.find((t) => t.id === (equipo.value.tipo_equipo_id ?? -1)))
 const tipoNombre = computed(() => (selectedTipo.value?.nombre ?? '').toLowerCase())
 const isPhoneType = computed(() => /cel|móvi|smart|tel[eé]fono/.test(tipoNombre.value))
-const isPcType    = computed(() => /pc|laptop|port[aá]til|computador|notebook|desktop/.test(tipoNombre.value))
+const isPcType = computed(() => /pc|laptop|port[aá]til|computador|notebook|desktop/.test(tipoNombre.value))
 
-const brandOptions = computed(() => {
+const brandOptions = computed<string[]>(() => {
   let base: readonly string[]
   if (isPhoneType.value && !isPcType.value) base = PHONE_BRANDS
   else if (isPcType.value && !isPhoneType.value) base = PC_BRANDS
   else base = [...new Set([...PC_BRANDS, ...PHONE_BRANDS])]
   return [...base, OTHER_OPTION]
 })
-watch(brandSelected, v => { if (v !== OTHER_OPTION) brandOther.value = '' })
+watch(brandSelected, (v) => {
+  if (v !== OTHER_OPTION) brandOther.value = ''
+})
 const equipoMarcaEffective = computed(() => (brandSelected.value === OTHER_OPTION ? brandOther.value : brandSelected.value) || '')
 
 /* ===== SO / RAM / DISCO ===== */
-const soOpciones = ['Windows 8','Windows 10','Windows 11','Ubuntu','Android','iOS','Otro'] as const
-const ramOpciones = ['2 GB','4 GB','8 GB','16 GB','32 GB','Otro'] as const
-const discoOpciones = ['128 GB','240 GB','256 GB','500 GB','512 GB','1 TB','2 TB','Otro'] as const
-const soSeleccionado = ref<string | null>(null); const soOtroDetalle = ref('')
-const ramSeleccionado = ref<string | null>(null); const ramOtroDetalle = ref('')
-const discoSeleccionado = ref<string | null>(null); const discoOtroDetalle = ref('')
+const soOpciones = ['Windows 8', 'Windows 10', 'Windows 11', 'Ubuntu', 'Android', 'iOS', 'Otro'] as const
+const ramOpciones = ['2 GB', '4 GB', '8 GB', '16 GB', '32 GB', 'Otro'] as const
+const discoOpciones = ['128 GB', '240 GB', '256 GB', '500 GB', '512 GB', '1 TB', '2 TB', 'Otro'] as const
 
-function withRamLabel(v: string) { return v.toLowerCase().includes('ram') ? v : `${v} RAM` }
+type SOValue = (typeof soOpciones)[number] | null
+type RAMValue = (typeof ramOpciones)[number] | null
+type DiscoValue = (typeof discoOpciones)[number] | null
+
+const soSeleccionado = ref<SOValue>(null)
+const soOtroDetalle = ref('')
+const ramSeleccionado = ref<RAMValue>(null)
+const ramOtroDetalle = ref('')
+const discoSeleccionado = ref<DiscoValue>(null)
+const discoOtroDetalle = ref('')
+
+function withRamLabel(v: string) {
+  return v.toLowerCase().includes('ram') ? v : `${v} RAM`
+}
 const specsPreview = computed(() => {
   const parts: string[] = []
   const so = (soSeleccionado.value === 'Otro' ? soOtroDetalle.value : soSeleccionado.value) || ''
@@ -743,16 +849,31 @@ const specsPreview = computed(() => {
   if (disco.trim()) parts.push(disco.trim())
   return parts.filter(Boolean).join(', ')
 })
-watch([soSeleccionado,soOtroDetalle,ramSeleccionado,ramOtroDetalle,discoSeleccionado,discoOtroDetalle], () => { equipo.value.specs = specsPreview.value })
+watch([soSeleccionado, soOtroDetalle, ramSeleccionado, ramOtroDetalle, discoSeleccionado, discoOtroDetalle], () => {
+  equipo.value.specs = specsPreview.value
+})
 
 /* ===== Estado físico ===== */
-const estadoFisicoOpciones = ['Sin golpes','Rayones leves','Golpes en esquinas','Pantalla rota','Pantalla con rayones','Tapa trasera dañada','Bisagras sueltas','Puertos con juego','Huellas de humedad','Oxidación visible','Otro'] as const
-const estadoFisicoSeleccionado = ref<string[]>([])
+const estadoFisicoOpciones = [
+  'Sin golpes',
+  'Rayones leves',
+  'Golpes en esquinas',
+  'Pantalla rota',
+  'Pantalla con rayones',
+  'Tapa trasera dañada',
+  'Bisagras sueltas',
+  'Puertos con juego',
+  'Huellas de humedad',
+  'Oxidación visible',
+  'Otro',
+] as const
+type EstadoFisico = (typeof estadoFisicoOpciones)[number]
+const estadoFisicoSeleccionado = ref<EstadoFisico[]>([])
 const estadoFisicoOtroDetalle = ref('')
 function estadoFisicoToText() {
   const list = [...estadoFisicoSeleccionado.value]
   const idx = list.indexOf('Otro')
-  if (idx >= 0 && estadoFisicoOtroDetalle.value.trim()) list[idx] = `Otro: ${estadoFisicoOtroDetalle.value.trim()}`
+  if (idx >= 0 && estadoFisicoOtroDetalle.value.trim()) list[idx] = `Otro: ${estadoFisicoOtroDetalle.value.trim()}` as EstadoFisico
   return list.join(', ')
 }
 
@@ -774,13 +895,18 @@ type FotoItem = {
   descripcion?: string
 }
 const fotos = ref<FotoItem[]>([])
-const fotosPicked = ref<File[] | null>(null)
+const fotosPicked = ref<File[] | File | null>(null)
 const initialFotoUrls = ref<Set<string>>(new Set())
 
 const previewDialog = ref(false)
 const previewSrc = ref<string>('')
-function abrirPreview(f: FotoItem) { previewSrc.value = f.url ?? f.preview ?? ''; previewDialog.value = true }
-function revokePreview(url?: string) { if (url?.startsWith('blob:')) URL.revokeObjectURL(url) }
+function abrirPreview(f: FotoItem) {
+  previewSrc.value = f.url ?? f.preview ?? ''
+  previewDialog.value = true
+}
+function revokePreview(url?: string) {
+  if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
+}
 function eliminarFoto(idx: number) {
   const f = fotos.value[idx]
   if (f?.preview) revokePreview(f.preview)
@@ -789,19 +915,30 @@ function eliminarFoto(idx: number) {
 
 const MAX_FOTOS = 3
 const MAX_MB = 6
-const ACEPTADOS = ['image/jpeg','image/png','image/webp','image/gif']
+const ACEPTADOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
 
-function onFotosPicked(files: File[] | null) {
-  if (!files || files.length === 0) return
+function onFotosPicked(files: File | File[] | null) {
+  const arr = Array.isArray(files) ? files : files ? [files] : []
+  if (arr.length === 0) return
+
   const espacio = MAX_FOTOS - fotos.value.length
-  const lote = Array.from(files).slice(0, Math.max(0, espacio))
+  const lote = arr.slice(0, Math.max(0, espacio))
+
   for (const file of lote) {
-    if (!ACEPTADOS.includes(file.type)) { snackbar.value = { show: true, message: 'Formato no permitido', color: 'error' }; continue }
-    if (file.size > MAX_MB * 1024 * 1024) { snackbar.value = { show: true, message: `La imagen supera ${MAX_MB}MB`, color: 'error' }; continue }
+    if (!ACEPTADOS.includes(file.type as (typeof ACEPTADOS)[number])) {
+      snackbar.value = { show: true, message: 'Formato no permitido', color: 'error' }
+      continue
+    }
+    if (file.size > MAX_MB * 1024 * 1024) {
+      snackbar.value = { show: true, message: `La imagen supera ${MAX_MB}MB`, color: 'error' }
+      continue
+    }
+
     const item: FotoItem = { file, preview: URL.createObjectURL(file), uploading: true }
     fotos.value.push(item)
-    subirFoto(item)
+    subirFoto(item).catch(() => {})
   }
+
   fotosPicked.value = null
 }
 
@@ -809,31 +946,32 @@ async function subirFoto(item: FotoItem) {
   try {
     const fd = new FormData()
     fd.append('foto', item.file as File)
-    const res = await fetch(`${API_ORIGIN}/api/v1/uploads/fotos`, { method: 'POST', body: fd })
-    const ct = res.headers.get('content-type') ?? ''
-    const data: any = ct.includes('application/json') ? await res.json() : await res.text()
-    if (!res.ok) throw new Error((typeof data === 'object' && data?.message) || `HTTP ${res.status}`)
-    const url = data?.url || data?.urls?.[0] || data?.data?.[0]?.url
+    // Usa el motor http (setea headers y token)
+    const res = await upload<{ data?: Array<{ url: string }>; url?: string; urls?: string[] }>('/v1/uploads/fotos', fd)
+    const url = res?.url || res?.urls?.[0] || res?.data?.[0]?.url
     if (!url) throw new Error('La API no devolvió URL')
     item.url = url
     item.error = undefined
-  } catch (e: any) {
-    item.error = e?.message || 'Error subiendo foto'
-    snackbar.value = { show: true, message: `Error subiendo foto: ${item.error}`, color: 'error' }
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Error subiendo foto'
+    item.error = msg
+    snackbar.value = { show: true, message: `Error subiendo foto: ${msg}`, color: 'error' }
   } finally {
     item.uploading = false
   }
 }
 
-const hayFotosSubiendo = computed(() => fotos.value.some(f => f.uploading))
-const hayFotosFallidas = computed(() => fotos.value.some(f => f.error))
+const hayFotosSubiendo = computed(() => fotos.value.some((f) => f.uploading))
+const hayFotosFallidas = computed(() => fotos.value.some((f) => f.error))
 const subiendoBloqueado = computed(() => !hayFotosFallidas.value)
 const textoBotonSubida = computed(() => (hayFotosFallidas.value ? 'Reintentar fallidas' : 'Subiendo…'))
 function reintentarFallidas() {
-  for (const f of fotos.value) if (f.error && f.file) { f.error = undefined; f.uploading = true; subirFoto(f) }
+  for (const f of fotos.value) if (f.error && f.file) { f.error = undefined; f.uploading = true; subirFoto(f).catch(() => {}) }
 }
 
-onBeforeUnmount(() => { fotos.value.forEach(f => revokePreview(f.preview)) })
+onBeforeUnmount(() => {
+  fotos.value.forEach((f) => revokePreview(f.preview))
+})
 
 /* ===== Fecha local -> ISO ===== */
 const fechaEntregaLocal = ref('')
@@ -853,17 +991,14 @@ async function cargarOrden() {
   error.value = null
   loading.value = true
   try {
-    const { method, url } = reqObtenerOrden(ordenId.value)
-    const res = await fetch(url, { method })
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`)
-    const data = await res.json()
+    const data = await get<OrdenDetalleDTO>(`/v1/ordenes/${ordenId.value}`)
 
     // razon social & código
     razon_social_id.value = data?.razon_social?.id ?? data?.razonSocial?.id ?? 1
     ordenCodigo.value = data?.codigo ?? ''
 
     // cliente
-    const c = data?.cliente || {}
+    const c = data?.cliente || null
     cliente.value = {
       nombre: c?.nombre ?? '',
       documento: c?.documento ?? '',
@@ -871,11 +1006,11 @@ async function cargarOrden() {
       correo: c?.correo ?? '',
       direccion: c?.direccion ?? '',
       whatsapp_opt_in: Boolean(c?.whatsapp_opt_in ?? false),
-      tipo_cliente: (c?.tipo_cliente ?? 'persona') as any,
+      tipo_cliente: (c?.tipo_cliente ?? 'persona') as 'persona' | 'empresa' | null,
     }
 
     // equipo
-    const e = data?.equipo || {}
+    const e = data?.equipo || null
     equipo.value = {
       tipo_equipo_id: e?.tipo_equipo_id ?? e?.tipoEquipoId ?? null,
       marca: e?.marca ?? '',
@@ -900,7 +1035,9 @@ async function cargarOrden() {
       const s = String(fecha)
       const d = new Date(s)
       const pad = (n: number) => String(n).padStart(2, '0')
-      const local = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+        d.getMinutes()
+      )}`
       fechaEntregaLocal.value = local
     } else {
       fechaEntregaLocal.value = ''
@@ -922,49 +1059,59 @@ async function cargarOrden() {
     }
 
     // estado físico → chips
-    const estFis = (orden.value.estado_estetico || '').split(',').map((s) => s.trim()).filter(Boolean)
-    estadoFisicoSeleccionado.value = estFis.filter(v => estadoFisicoOpciones.includes(v as any)) as string[]
-    const otro = estFis.find(s => s.toLowerCase().startsWith('otro:'))
+    const estFis = (orden.value.estado_estetico || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    estadoFisicoSeleccionado.value = estFis.filter((v): v is EstadoFisico =>
+      (estadoFisicoOpciones as readonly string[]).includes(v)
+    )
+    const otro = estFis.find((s) => s.toLowerCase().startsWith('otro:'))
     estadoFisicoOtroDetalle.value = otro ? otro.split(':').slice(1).join(':').trim() : ''
 
     // accesorios
     const acc = Array.isArray(data?.accesorios) ? data.accesorios : []
-    accesoriosSeleccionados.value = acc.map((a: any) => a.accesorio_id ?? a.id).filter((x: any) => Number.isInteger(x))
+    accesoriosSeleccionados.value = acc
+      .map((a) => (typeof a.accesorio_id === 'number' ? a.accesorio_id : a.id))
+      .filter((x: unknown): x is number => Number.isInteger(x))
 
     // fotos existentes
     const fs = Array.isArray(data?.fotos) ? data.fotos : []
-    initialFotoUrls.value = new Set(fs.map((f: any) => f.url).filter(Boolean))
-    fotos.value = fs.map((f: any) => ({
+    initialFotoUrls.value = new Set(fs.map((f) => f.url).filter(Boolean))
+    fotos.value = fs.map((f) => ({
       url: f.url,
       uploading: false,
       descripcion: f.descripcion ?? '',
     }))
-  } catch (e: any) {
-    error.value = e?.message || 'No fue posible cargar la orden'
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'No fue posible cargar la orden'
+    error.value = msg
   } finally {
     loading.value = false
   }
 }
 
-/* ===== Helper accesorios (intenta payload alterno si 500) ===== */
+/* ===== Helper accesorios ===== */
 async function actualizarAccesoriosSeleccionados(): Promise<boolean> {
-  const sel = (accesoriosSeleccionados.value || []).filter(id => id > 0).map(id => ({ accesorio_id: id }))
-  const headers = { 'Content-Type': 'application/json' }
+  const sel = (accesoriosSeleccionados.value || [])
+    .filter((id) => id > 0)
+    .map((id) => ({ accesorio_id: id }))
 
   try {
-    const { method, url, body } = reqAgregarAccesorios(ordenId.value, sel as any)
-    const r = await fetch(url, { method, headers, body: JSON.stringify(body) })
-    if (r.ok) return true
-
-    // fallback: algunos backends esperan { accesorios: [...] }
-    const r2 = await fetch(url, { method, headers, body: JSON.stringify({ accesorios: sel }) })
-    if (r2.ok) return true
-
-    const t = await r.text()
-    throw new Error(`HTTP ${r.status}: ${t}`)
-  } catch (err: any) {
-    snackbar.value = { show: true, message: `Accesorios no se pudieron actualizar: ${err?.message || 'Error'}`, color: 'error' }
-    return false
+    // Algunos backends esperan { accesorios } y otros solo array.
+    // Enviaremos { accesorios } primero y, si falla, probamos el array plano.
+    await post(`/v1/ordenes/${ordenId.value}/accesorios`, { accesorios: sel })
+    return true
+  } catch (e1) {
+    try {
+      await post(`/v1/ordenes/${ordenId.value}/accesorios`, sel)
+      return true
+    } catch (e2) {
+      const msg =
+        e2 instanceof ApiError ? e2.message : e2 instanceof Error ? e2.message : 'Error al actualizar accesorios'
+      snackbar.value = { show: true, message: `Accesorios no se pudieron actualizar: ${msg}`, color: 'error' }
+      return false
+    }
   }
 }
 
@@ -987,7 +1134,7 @@ async function onSubmit() {
   saving.value = true
   try {
     // 1) PATCH orden
-    const { method, url, body } = reqActualizarOrden(ordenId.value, {
+    await patch(`/v1/ordenes/${ordenId.value}`, {
       estado_estetico: orden.value.estado_estetico ?? null,
       fallo_reportado: orden.value.fallo_reportado ?? null,
       observaciones_cliente: orden.value.observaciones_cliente ?? null,
@@ -999,33 +1146,32 @@ async function onSubmit() {
       anticipo: orden.value.anticipo ?? null,
       metodo_pago_id: orden.value.metodo_pago_id ?? null,
       fecha_entrega_acordada: toIsoOrNull(fechaEntregaLocal.value),
-    } as any)
-    const upRes = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    if (!upRes.ok) throw new Error(`No se pudo actualizar la orden. ${upRes.status} ${await upRes.text()}`)
+    })
 
-    // 2) Accesorios (robusto)
+    // 2) Accesorios
     await actualizarAccesoriosSeleccionados()
 
     // 3) Fotos NUEVAS
     const nuevas = fotos.value
-      .filter(f => f.url && !initialFotoUrls.value.has(f.url))
-      .map(f => ({ url: f.url as string, descripcion: f.descripcion ?? null }))
+      .filter((f) => f.url && !initialFotoUrls.value.has(f.url))
+      .map((f) => ({ url: f.url as string, descripcion: f.descripcion ?? null }))
 
     if (nuevas.length > 0) {
-      const { method: mF, url: uF, body: bF } = reqAgregarFotos(ordenId.value, nuevas as any)
-      let r = await fetch(uF, { method: mF, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bF) })
-      if (!r.ok) {
-        // fallback: { fotos: [...] }
-        r = await fetch(uF, { method: mF, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotos: nuevas }) })
+      try {
+        await post(`/v1/ordenes/${ordenId.value}/fotos`, { fotos: nuevas })
+      } catch {
+        // fallback: array plano
+        await post(`/v1/ordenes/${ordenId.value}/fotos`, nuevas)
       }
-      if (!r.ok) throw new Error(`No se pudieron agregar las fotos. ${r.status} ${await r.text()}`)
-      nuevas.forEach(n => initialFotoUrls.value.add(n.url))
+      nuevas.forEach((n) => initialFotoUrls.value.add(n.url))
     }
 
     snackbar.value = { show: true, message: 'Orden actualizada correctamente.', color: 'success' }
     await cargarOrden()
-  } catch (err: any) {
-    snackbar.value = { show: true, message: err?.message || 'No fue posible guardar los cambios', color: 'error' }
+  } catch (e) {
+    const msg =
+      e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'No fue posible guardar los cambios'
+    snackbar.value = { show: true, message: msg, color: 'error' }
   } finally {
     saving.value = false
   }
@@ -1034,27 +1180,37 @@ async function onSubmit() {
 /* ===== Reset (evita warning y recarga datos) ===== */
 function resetForm() {
   // Limpia selecciones temporales locales (fotos nuevas no confirmadas)
-  fotos.value
-    .filter(f => f.preview && !f.url)
-    .forEach(f => revokePreview(f.preview))
+  fotos.value.filter((f) => f.preview && !f.url).forEach((f) => revokePreview(f.preview))
   fotosPicked.value = null
   // Relee la orden desde el backend
   cargarOrden()
 }
 
 /* ===== Migas ===== */
-const breadcrumbs = computed(() => ([
+const breadcrumbs = computed(() => [
   { title: 'Órdenes', to: { name: 'historial-ordenes' } },
   { title: ordenCodigo.value || `Orden #${ordenId.value}`, disabled: true },
-]))
+])
 
 /* ===== Init ===== */
 onMounted(async () => {
   await Promise.all([cargarCatalogos(), cargarOrden()])
 })
+
+/* ===== Computados auxiliares para logos ===== */
+const razonSocialLogo = computed(() => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.logo ?? null)
+const razonSocialLogoWidth = computed(
+  () => razonesSociales.value.find((r) => r.id === razon_social_id.value)?.logoWidth ?? 160
+)
 </script>
 
 <style scoped>
-.form { padding: 1rem; }
-.text-h5, .text-h6 { color: #1976D2; font-weight: bold; }
+.form {
+  padding: 1rem;
+}
+.text-h5,
+.text-h6 {
+  color: #1976d2;
+  font-weight: bold;
+}
 </style>

@@ -301,8 +301,17 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from 'vue'
-import RazonSocialService, { type RazonSocialDTO, type RazonSocialUpdatePayload } from '@/services/RazonSocialService'
-import { listarUsuarios, actualizarUsuario, uploadAvatar as uploadUserAvatar, type Usuario } from '@/services/userService'
+import { ApiError } from '@/services/http'
+import RazonSocialService, {
+  type RazonSocialDTO,
+  type RazonSocialUpdatePayload,
+} from '@/services/RazonSocialService'
+import {
+  listarUsuarios,
+  actualizarUsuario,
+  uploadAvatar as uploadUserAvatar,
+  type Usuario,
+} from '@/services/userService'
 import { authSetStore } from '@/stores/AuthStore'
 
 const auth = authSetStore()
@@ -332,7 +341,9 @@ const form = reactive<RazonSocialUpdatePayload>({
   avatar_url: '',
 })
 
-const API_ORIGIN = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:3333').toString().replace(/\/$/, '')
+const API_ORIGIN = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:3333')
+  .toString()
+  .replace(/\/$/, '')
 const avatarPreview = computed(() => {
   const url = (editMode.value ? form.avatar_url : empresa.value?.avatar_url) || ''
   if (!url) return 'https://i.pravatar.cc/160?u=razon-social'
@@ -340,7 +351,9 @@ const avatarPreview = computed(() => {
 })
 
 const fileInput = ref<HTMLInputElement | null>(null)
-function pickFile() { fileInput.value?.click() }
+function pickFile() {
+  fileInput.value?.click()
+}
 async function onFile(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (!files || !files[0]) return
@@ -348,8 +361,9 @@ async function onFile(e: Event) {
     uploading.value = true
     const url = await RazonSocialService.uploadAvatar(files[0])
     form.avatar_url = url
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo subir la imagen'
+  } catch (err) {
+    errorMsg.value =
+      err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo subir la imagen'
   } finally {
     uploading.value = false
     if (fileInput.value) fileInput.value.value = ''
@@ -362,11 +376,12 @@ async function loadRS() {
     const res = await RazonSocialService.listarRazonesSociales('', true)
     razonesSociales.value = res.data
     const saved = Number(localStorage.getItem('rs_id') || '')
-    const exists = res.data.some(r => r.id === saved)
-    selectedId.value = exists ? saved : (res.data[0]?.id ?? null)
+    const exists = res.data.some((r) => r.id === saved)
+    selectedId.value = exists ? saved : res.data[0]?.id ?? null
     if (selectedId.value) await onChangeRS(selectedId.value)
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo cargar la lista de razones sociales'
+  } catch (err) {
+    errorMsg.value =
+      err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo cargar razones sociales'
   } finally {
     loadingRS.value = false
   }
@@ -394,8 +409,9 @@ async function onChangeRS(id: number) {
 
     await loadUserByRS(id)
     localStorage.setItem('rs_id', String(id))
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo cargar la empresa seleccionada'
+  } catch (err) {
+    errorMsg.value =
+      err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo cargar la empresa'
   } finally {
     loading.value = false
   }
@@ -414,7 +430,10 @@ function toggleEdit(v: boolean) {
     form.avatar_url = empresa.value.avatar_url ?? ''
   }
 }
-function cancelEdit() { toggleEdit(false); errorMsg.value = '' }
+function cancelEdit() {
+  toggleEdit(false)
+  errorMsg.value = ''
+}
 
 async function onSubmit() {
   if (!empresa.value) return
@@ -438,8 +457,9 @@ async function onSubmit() {
     empresa.value = refreshed.data
     okMsg.value = true
     toggleEdit(false)
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo guardar'
+  } catch (err) {
+    errorMsg.value =
+      err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo guardar'
   } finally {
     saving.value = false
   }
@@ -460,7 +480,9 @@ const userForm = reactive<Partial<Usuario>>({
 })
 
 const userFileInput = ref<HTMLInputElement | null>(null)
-function pickUserFile() { userFileInput.value?.click() }
+function pickUserFile() {
+  userFileInput.value?.click()
+}
 
 const userAvatar = computed(() => {
   const url = (editUser.value ? userForm.avatar_url : usuario.value?.avatar_url) || ''
@@ -475,8 +497,9 @@ async function onUserFile(e: Event) {
     uploading.value = true
     const url = await uploadUserAvatar(files[0])
     userForm.avatar_url = url
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo subir la imagen del usuario'
+  } catch (err) {
+    errorMsg.value =
+      err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo subir la imagen del usuario'
   } finally {
     uploading.value = false
     if (userFileInput.value) userFileInput.value.value = ''
@@ -506,8 +529,9 @@ async function loadUserByRS(rsId: number) {
       userForm.telefono = usuario.value.telefono ?? ''
       userForm.avatar_url = usuario.value.avatar_url ?? ''
     }
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo cargar el usuario de la razón social'
+  } catch (err) {
+    errorMsg.value =
+      err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo cargar el usuario'
   } finally {
     loadingUser.value = false
   }
@@ -530,25 +554,51 @@ async function saveUser() {
     const updated = await actualizarUsuario(usuario.value.id, payload)
     usuario.value = updated
 
-    // Refresca datos visibles en el sidebar (si estás mostrando el autenticado ahí)
-    if (auth.user && auth.user.id === updated.id) {
-      auth.user.nombre = [updated.nombres, updated.apellidos].filter(Boolean).join(' ') || updated.correo
-      ;(auth.user as any).profilePictureUrl = updated.avatar_url || (auth.user as any).profilePictureUrl
-      try { (auth as any).bumpAvatarStamp?.() } catch {}
-      localStorage.setItem('user', JSON.stringify(auth.user))
-    }
+    // Refresca datos visibles en el sidebar si corresponde
+{
+  // helpers locales (sin any)
+  type SidebarAuthUser = {
+    id: number
+    correo: string
+    nombre?: string
+    profilePictureUrl?: string | null
+  }
+  function isSidebarAuthUser(u: unknown): u is SidebarAuthUser {
+    return !!u &&
+      typeof u === 'object' &&
+      'id' in u && typeof (u as { id: unknown }).id === 'number' &&
+      'correo' in u && typeof (u as { correo: unknown }).correo === 'string'
+  }
 
-    okMsg.value = true
-    editUser.value = false
-  } catch (e: any) {
-    errorMsg.value = e?.message || 'No se pudo guardar el usuario'
-  } finally {
-    savingUser.value = false
+  const store = auth as { user?: unknown; bumpAvatarStamp?: unknown }
+  const current = store.user
+
+  if (current && isSidebarAuthUser(current) && current.id === updated.id) {
+    const nombre =
+      [updated.nombres, updated.apellidos].filter(Boolean).join(' ') || updated.correo
+
+    current.nombre = nombre
+    current.profilePictureUrl = updated.avatar_url ?? current.profilePictureUrl ?? null
+
+    if (typeof store.bumpAvatarStamp === 'function') {
+      store.bumpAvatarStamp()
+    }
+    localStorage.setItem('user', JSON.stringify(current))
   }
 }
 
+okMsg.value = true
+editUser.value = false
+} catch (err) {
+errorMsg.value =
+  err instanceof ApiError ? err.message : (err as Error)?.message || 'No se pudo guardar el usuario'
+} finally {
+savingUser.value = false
+}
+}
+
 onMounted(async () => {
-  await loadRS()
+await loadRS()
 })
 </script>
 
@@ -556,3 +606,4 @@ onMounted(async () => {
 .avatar-wrap { position: relative; display: inline-block; }
 .form :deep(.v-field) { background: #fafafa; }
 </style>
+
